@@ -84,6 +84,35 @@ const anthropicTools: Anthropic.Tool[] = [
       required: ["code", "description"],
     },
   },
+  {
+    name: "generate_inputs",
+    description:
+      "Generate test inputs for the problem. Use this tool when the user asks for test cases, sample inputs, edge cases, or stress tests. Generate inputs that follow the problem's input format exactly. This is useful for testing solutions against custom inputs, especially edge cases that aren't covered by the sample tests.",
+    input_schema: {
+      type: "object",
+      properties: {
+        inputs: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              input: {
+                type: "string",
+                description: "The test input following the problem's input format exactly.",
+              },
+              description: {
+                type: "string",
+                description: "Brief description of what this test case is testing (e.g., 'minimum n', 'maximum values', 'all same elements').",
+              },
+            },
+            required: ["input", "description"],
+          },
+          description: "Array of test inputs to generate.",
+        },
+      },
+      required: ["inputs"],
+    },
+  },
 ];
 
 export async function POST(request: Request) {
@@ -298,6 +327,26 @@ FORMATTING RESPONSES:
                     fullContent += `\n\n[Proposed code modification: ${args.description}]`;
                   } catch (e) {
                     console.error("Failed to parse tool call arguments:", e);
+                  }
+                  currentToolName = "";
+                  currentToolInput = "";
+                } else if (currentToolName === "generate_inputs" && currentToolInput) {
+                  try {
+                    const args = JSON.parse(currentToolInput);
+                    controller.enqueue(
+                      encoder.encode(
+                        `data: ${JSON.stringify({
+                          toolCall: {
+                            name: "generate_inputs",
+                            inputs: args.inputs,
+                          },
+                        })}\n\n`
+                      )
+                    );
+                    const inputDescriptions = args.inputs.map((i: { description: string }) => i.description).join(", ");
+                    fullContent += `\n\n[Generated test inputs: ${inputDescriptions}]`;
+                  } catch (e) {
+                    console.error("Failed to parse generate_inputs arguments:", e);
                   }
                   currentToolName = "";
                   currentToolInput = "";

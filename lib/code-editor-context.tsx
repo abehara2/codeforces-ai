@@ -13,6 +13,11 @@ interface PendingCodeChange {
   description: string;
 }
 
+export interface SampleTest {
+  input: string;
+  expectedOutput: string;
+}
+
 type SaveStatus = "saved" | "unsaved" | "saving";
 
 interface CodeEditorContextType {
@@ -31,6 +36,12 @@ interface CodeEditorContextType {
   saveCode: () => Promise<void>;
   initializeCode: (savedCode: Record<string, string>) => void;
   getSavedCodeForLanguage: (extension: string) => string | undefined;
+  // Input functionality
+  stdin: string;
+  setStdin: (stdin: string) => void;
+  // Sample tests
+  sampleTests: SampleTest[];
+  activeSampleTestIndex: number | null; // null means custom input
 }
 
 const CodeEditorContext = createContext<CodeEditorContextType | null>(null);
@@ -39,18 +50,35 @@ interface CodeEditorProviderProps {
   children: ReactNode;
   chatId?: string | null;
   initialCodeByLanguage?: Record<string, string>;
+  initialSampleTests?: SampleTest[];
 }
 
 export function CodeEditorProvider({ 
   children, 
   chatId = null, 
-  initialCodeByLanguage = {} 
+  initialCodeByLanguage = {},
+  initialSampleTests = [],
 }: CodeEditorProviderProps) {
   const [code, setCodeState] = useState("");
   const [selectedLanguage, setSelectedLanguageState] = useState<Language | null>(null);
   const [pendingChange, setPendingChange] = useState<PendingCodeChange | null>(null);
   const [lastChangeResult, setLastChangeResult] = useState<"accepted" | "rejected" | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+  
+  // Sample tests and input tracking
+  const [sampleTests] = useState<SampleTest[]>(initialSampleTests);
+  const [stdin, setStdinState] = useState(initialSampleTests[0]?.input || "");
+  const [activeSampleTestIndex, setActiveSampleTestIndex] = useState<number | null>(
+    initialSampleTests.length > 0 ? 0 : null
+  );
+
+  // Custom setStdin that also tracks if we're using a sample test
+  const setStdin = useCallback((newStdin: string) => {
+    setStdinState(newStdin);
+    // Check if this matches any sample test input
+    const matchingIndex = sampleTests.findIndex(test => test.input === newStdin);
+    setActiveSampleTestIndex(matchingIndex >= 0 ? matchingIndex : null);
+  }, [sampleTests]);
   
   // Store saved code per language
   const savedCodeByLanguage = useRef<Record<string, string>>(initialCodeByLanguage);
@@ -158,6 +186,10 @@ export function CodeEditorProvider({
         saveCode,
         initializeCode,
         getSavedCodeForLanguage,
+        stdin,
+        setStdin,
+        sampleTests,
+        activeSampleTestIndex,
       }}
     >
       {children}

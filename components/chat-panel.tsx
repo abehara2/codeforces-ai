@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowRight, Loader2, Bot, User, Code2, Check, X, Sparkles, PanelRightClose } from "lucide-react";
+import { ArrowRight, Loader2, Bot, User, Code2, Check, X, Sparkles, PanelRightClose, Copy, TestTube2, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +15,11 @@ const rehypePlugins = [
   defaultRehypePlugins.harden,
 ];
 
+interface GeneratedInput {
+  input: string;
+  description: string;
+}
+
 interface Message {
   id: string;
   role: "user" | "assistant";
@@ -24,6 +29,7 @@ interface Message {
     description: string;
     applied: boolean | null; // null = pending/reviewing, true = accepted, false = rejected
   };
+  generatedInputs?: GeneratedInput[];
 }
 
 interface ChatPanelProps {
@@ -36,7 +42,7 @@ const MAX_WIDTH = 600;
 const DEFAULT_WIDTH = 384;
 
 export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
-  const { code, selectedLanguage, setPendingChange, pendingChange, lastChangeResult } = useCodeEditor();
+  const { code, selectedLanguage, setPendingChange, pendingChange, lastChangeResult, setStdin } = useCodeEditor();
   const { chatCollapsed, setChatCollapsed } = useSidebar();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
@@ -83,6 +89,18 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
     };
   }, [isDragging]);
 
+  // Scroll to bottom on initial load
+  useEffect(() => {
+    // Small delay to ensure DOM is rendered
+    const timer = setTimeout(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Scroll to bottom when messages change
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -178,6 +196,7 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
       const decoder = new TextDecoder();
       let fullContent = "";
       let receivedToolCall: { code: string; description: string } | null = null;
+      let receivedGeneratedInputs: GeneratedInput[] | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -204,6 +223,7 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
                       applied: null, // null = currently reviewing in diff view
                     }
                   : undefined,
+                generatedInputs: receivedGeneratedInputs || undefined,
               };
               setMessages((prev) => [...prev, assistantMessage]);
               setStreamingContent("");
@@ -216,6 +236,11 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
                   description: receivedToolCall.description,
                 });
               }
+
+              // If there are generated inputs, set the first one to the input container
+              if (receivedGeneratedInputs && receivedGeneratedInputs.length > 0) {
+                setStdin(receivedGeneratedInputs[0].input);
+              }
             } else {
               try {
                 const parsed = JSON.parse(data);
@@ -224,10 +249,14 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
                   setStreamingContent(fullContent);
                 }
                 if (parsed.toolCall) {
-                  receivedToolCall = {
-                    code: parsed.toolCall.code,
-                    description: parsed.toolCall.description,
-                  };
+                  if (parsed.toolCall.name === "generate_inputs") {
+                    receivedGeneratedInputs = parsed.toolCall.inputs;
+                  } else {
+                    receivedToolCall = {
+                      code: parsed.toolCall.code,
+                      description: parsed.toolCall.description,
+                    };
+                  }
                 }
               } catch {
                 // Ignore parse errors
@@ -355,6 +384,50 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
                         <span>Changes rejected</span>
                       </>
                     )}
+                  </div>
+                )}
+                {/* Generated inputs */}
+                {message.generatedInputs && message.generatedInputs.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700">
+                      <TestTube2 className="h-3.5 w-3.5" />
+                      <span>Generated Test Inputs</span>
+                    </div>
+                    {message.generatedInputs.map((testInput, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-amber-50 border border-amber-200 rounded-md overflow-hidden"
+                      >
+                        <div className="flex items-center justify-between px-2.5 py-1.5 bg-amber-100/50 border-b border-amber-200">
+                          <span className="text-xs text-amber-800 font-medium">
+                            {testInput.description}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => {
+                                setStdin(testInput.input);
+                              }}
+                              className="p-1 hover:bg-amber-200/50 rounded transition-colors flex items-center gap-1 text-xs text-amber-700"
+                              title="Use this input"
+                            >
+                              <Play className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(testInput.input);
+                              }}
+                              className="p-1 hover:bg-amber-200/50 rounded transition-colors"
+                              title="Copy input"
+                            >
+                              <Copy className="h-3 w-3 text-amber-700" />
+                            </button>
+                          </div>
+                        </div>
+                        <pre className="px-2.5 py-2 text-xs font-mono text-amber-900 whitespace-pre-wrap break-all">
+                          {testInput.input}
+                        </pre>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

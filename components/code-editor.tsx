@@ -97,9 +97,17 @@ export function CodeEditor() {
     saveCode,
     chatId,
     getSavedCodeForLanguage,
+    stdin,
+    setStdin,
+    sampleTests,
+    activeSampleTestIndex,
   } = useCodeEditor();
+  
+  // Get expected output if we're using a sample test
+  const expectedOutput = activeSampleTestIndex !== null 
+    ? sampleTests[activeSampleTestIndex]?.expectedOutput 
+    : null;
   const [languages, setLanguages] = useState<Language[]>([]);
-  const [stdin, setStdin] = useState("");
   const [result, setResult] = useState<ExecutionResult | null>(null);
   const [executing, setExecuting] = useState(false);
   
@@ -125,22 +133,6 @@ export function CodeEditor() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [chatId, selectedLanguage, saveStatus, saveCode]);
 
-  // Track if we just accepted a change to trigger auto-save
-  const justAccepted = useRef(false);
-
-  // Auto-save after accepting a change
-  const handleAcceptChange = useCallback(() => {
-    acceptChange();
-    justAccepted.current = true;
-  }, [acceptChange]);
-
-  // Auto-save when status becomes unsaved after accepting a change
-  useEffect(() => {
-    if (justAccepted.current && saveStatus === "unsaved" && chatId) {
-      justAccepted.current = false;
-      saveCode();
-    }
-  }, [saveStatus, chatId, saveCode]);
 
   // Vertical resize handler (panel height)
   const handleVerticalMouseDown = useCallback((e: React.MouseEvent) => {
@@ -446,7 +438,7 @@ export function CodeEditor() {
                 <Button
                   size="sm"
                   className="gap-1.5 bg-green-600 hover:bg-green-700"
-                  onClick={handleAcceptChange}
+                  onClick={acceptChange}
                 >
                   <Check className="h-3.5 w-3.5" />
                   Accept
@@ -477,7 +469,19 @@ export function CodeEditor() {
           style={{ width: `${inputWidth}%` }}
         >
           <div className="h-9 px-3 flex items-center border-b border-border bg-muted flex-shrink-0">
-            <span className="text-xs font-medium">INPUT</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium">INPUT</span>
+              {activeSampleTestIndex !== null && (
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+                  BASE INPUTS
+                </span>
+              )}
+              {activeSampleTestIndex === null && stdin.trim() && (
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
+                  Custom
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex-1 overflow-auto">
             <Textarea
@@ -503,7 +507,26 @@ export function CodeEditor() {
           style={{ width: `${100 - inputWidth}%` }}
         >
           <div className="h-9 px-3 flex items-center justify-between border-b border-border bg-muted flex-shrink-0">
-            <span className="text-xs font-medium">OUTPUT</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium">OUTPUT</span>
+              {/* Show pass/fail indicator when comparing against expected */}
+              {result && expectedOutput !== null && result.status?.id === 3 && (
+                (() => {
+                  const actualTrimmed = (result.stdout || "").trim();
+                  const expectedTrimmed = expectedOutput.trim();
+                  const isMatch = actualTrimmed === expectedTrimmed;
+                  return (
+                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                      isMatch 
+                        ? "bg-green-100 text-green-700" 
+                        : "bg-red-100 text-red-700"
+                    }`}>
+                      {isMatch ? "✓ PASS" : "✗ WRONG"}
+                    </span>
+                  );
+                })()
+              )}
+            </div>
             {result && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 {result.time && <span>{result.time}s</span>}
@@ -520,20 +543,43 @@ export function CodeEditor() {
               </div>
             )}
           </div>
-          <div className="flex-1 overflow-auto">
-            <pre className="p-3 text-sm font-mono whitespace-pre-wrap">
-              {result?.compile_output && (
-                <span className="text-destructive">{result.compile_output}</span>
+          <div className="flex-1 flex overflow-hidden">
+            {/* Actual Output */}
+            <div className={`flex flex-col overflow-hidden ${expectedOutput !== null ? "flex-1 border-r border-border" : "w-full"}`}>
+              {expectedOutput !== null && (
+                <div className="h-6 px-2 flex items-center bg-muted/50 border-b border-border flex-shrink-0">
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase">Your Output</span>
+                </div>
               )}
-              {result?.stderr && (
-                <span className="text-destructive">{result.stderr}</span>
-              )}
-              {result?.stdout || (
-                <span className="text-muted-foreground">
-                  {executing ? "Running..." : "Run your code to see output"}
-                </span>
-              )}
-            </pre>
+              <div className="flex-1 overflow-auto">
+                <pre className="p-3 text-sm font-mono whitespace-pre-wrap">
+                  {result?.compile_output && (
+                    <span className="text-destructive">{result.compile_output}</span>
+                  )}
+                  {result?.stderr && (
+                    <span className="text-destructive">{result.stderr}</span>
+                  )}
+                  {result?.stdout || (
+                    <span className="text-muted-foreground">
+                      {executing ? "Running..." : "Run your code to see output"}
+                    </span>
+                  )}
+                </pre>
+              </div>
+            </div>
+            {/* Expected Output - only shown when using sample test */}
+            {expectedOutput !== null && (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="h-6 px-2 flex items-center bg-muted/50 border-b border-border flex-shrink-0">
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase">Expected</span>
+                </div>
+                <div className="flex-1 overflow-auto bg-green-50/30">
+                  <pre className="p-3 text-sm font-mono whitespace-pre-wrap text-green-800">
+                    {expectedOutput}
+                  </pre>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
