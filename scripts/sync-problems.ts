@@ -90,7 +90,7 @@ async function createBrowserbaseSession(): Promise<{ driver: WebDriver; sessionI
     projectId,
     browserSettings: {
       fingerprint: {
-        browserListQuery: "last 2 Chrome versions",
+        browsers: ["chrome"],
         httpVersion: "2",
         locales: ["en-US", "en"],
         operatingSystems: ["macos"],
