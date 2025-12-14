@@ -32,6 +32,7 @@ export function ChatSidebar() {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; chatId: string } | null>(null);
+  const [newProblemOpen, setNewProblemOpen] = useState(false);
   const { collapsed, setCollapsed } = useSidebar();
   const sidebarRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -156,6 +157,13 @@ export function ChatSidebar() {
     fetchChats();
     fetchSubscription();
   }, []);
+
+  // Refresh chats when navigating to a new chat (e.g., after creating from welcome screen)
+  useEffect(() => {
+    if (pathname.startsWith("/chat/") && pathname !== "/chat/new") {
+      fetchChats();
+    }
+  }, [pathname]);
 
   const handleDelete = async (e: React.MouseEvent, chatId: string) => {
     e.preventDefault();
@@ -330,13 +338,17 @@ export function ChatSidebar() {
 
       {/* New Problem Card */}
       <div className="p-3 border-t border-border">
+        <button 
+          onClick={() => setNewProblemOpen(true)}
+          className="flex items-center gap-2 w-full px-3 py-2.5 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          New Problem
+        </button>
         <NewProblemModal
-          trigger={
-            <button className="flex items-center gap-2 w-full px-3 py-2.5 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
-              <Plus className="h-4 w-4" />
-              New Problem
-            </button>
-          }
+          open={newProblemOpen}
+          onOpenChange={setNewProblemOpen}
+          onChatCreated={fetchChats}
         />
       </div>
 

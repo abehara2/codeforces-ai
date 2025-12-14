@@ -18,9 +18,10 @@ interface NewProblemModalProps {
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onChatCreated?: () => void;
 }
 
-export function NewProblemModal({ trigger, open, onOpenChange }: NewProblemModalProps) {
+export function NewProblemModal({ trigger, open, onOpenChange, onChatCreated }: NewProblemModalProps) {
   const [problemUrl, setProblemUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -68,6 +69,7 @@ export function NewProblemModal({ trigger, open, onOpenChange }: NewProblemModal
 
       const chat = await response.json();
       setProblemUrl("");
+      onChatCreated?.();
       onOpenChange?.(false);
       router.push(`/chat/${chat.id}`);
     } catch (err) {
@@ -80,7 +82,7 @@ export function NewProblemModal({ trigger, open, onOpenChange }: NewProblemModal
   const content = (
     <form onSubmit={handleCreateChat} className="space-y-4">
       <DialogHeader>
-        <DialogTitle>Paste a Codeforces URL</DialogTitle>
+        <DialogTitle>Enter a Codeforces URL</DialogTitle>
       </DialogHeader>
       <div className="relative">
         <Input

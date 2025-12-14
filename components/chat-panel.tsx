@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowRight, Loader2, Bot, User, Code2, Check, X, Sparkles, PanelRightClose, Copy, TestTube2, Play } from "lucide-react";
+import { ArrowRight, Loader2, Bot, User, Code2, Check, X, Sparkles, PanelRightClose, TestTube2, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -402,26 +402,15 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
                           <span className="text-xs text-amber-800 font-medium">
                             {testInput.description}
                           </span>
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => {
-                                setStdin(testInput.input);
-                              }}
-                              className="p-1 hover:bg-amber-200/50 rounded transition-colors flex items-center gap-1 text-xs text-amber-700"
-                              title="Use this input"
-                            >
-                              <Play className="h-3 w-3" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(testInput.input);
-                              }}
-                              className="p-1 hover:bg-amber-200/50 rounded transition-colors"
-                              title="Copy input"
-                            >
-                              <Copy className="h-3 w-3 text-amber-700" />
-                            </button>
-                          </div>
+                          <button
+                            onClick={() => {
+                              setStdin(testInput.input);
+                            }}
+                            className="p-1 hover:bg-amber-200/50 rounded transition-colors flex items-center gap-1 text-xs text-amber-700"
+                            title="Use this input"
+                          >
+                            <Play className="h-3 w-3" />
+                          </button>
                         </div>
                         <pre className="px-2.5 py-2 text-xs font-mono text-amber-900 whitespace-pre-wrap break-all">
                           {testInput.input}

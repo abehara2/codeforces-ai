@@ -258,6 +258,14 @@ export function ProblemStatement({ html }: ProblemStatementProps) {
         font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
         font-size: 0.85em;
       }
+      
+      /* Hide copy elements from Codeforces */
+      .problem-statement .input-output-copier,
+      .problem-statement [class*="copy"],
+      .problem-statement [title*="Copy"],
+      .problem-statement [title*="copy"] {
+        display: none !important;
+      }
     `;
     container.appendChild(style);
 
