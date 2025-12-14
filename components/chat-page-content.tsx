@@ -16,6 +16,7 @@ interface ChatPageContentProps {
   problemId: string;
   problemHtml: string;
   messages: Message[];
+  codeByLanguage: Record<string, string>;
 }
 
 export function ChatPageContent({
@@ -23,9 +24,10 @@ export function ChatPageContent({
   problemId,
   problemHtml,
   messages,
+  codeByLanguage,
 }: ChatPageContentProps) {
   return (
-    <CodeEditorProvider>
+    <CodeEditorProvider chatId={chatId} initialCodeByLanguage={codeByLanguage}>
       {/* Main Content with Tabs */}
       <MainContent problemId={problemId} problemHtml={problemHtml} />
 

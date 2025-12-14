@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import Editor, { DiffEditor } from "@monaco-editor/react";
-import { Play, Loader2, RotateCcw, GripHorizontal, Check, X, Sparkles, Send } from "lucide-react";
+import { Play, Loader2, RotateCcw, GripHorizontal, Check, X, Sparkles, Send, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -93,6 +93,10 @@ export function CodeEditor() {
     pendingChange,
     acceptChange,
     rejectChange,
+    saveStatus,
+    saveCode,
+    chatId,
+    getSavedCodeForLanguage,
   } = useCodeEditor();
   const [languages, setLanguages] = useState<Language[]>([]);
   const [stdin, setStdin] = useState("");
@@ -105,6 +109,38 @@ export function CodeEditor() {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingVertical = useRef(false);
   const isDraggingHorizontal = useRef(false);
+
+  // Cmd+S / Ctrl+S keyboard shortcut to save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        if (chatId && selectedLanguage && saveStatus === "unsaved") {
+          saveCode();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [chatId, selectedLanguage, saveStatus, saveCode]);
+
+  // Track if we just accepted a change to trigger auto-save
+  const justAccepted = useRef(false);
+
+  // Auto-save after accepting a change
+  const handleAcceptChange = useCallback(() => {
+    acceptChange();
+    justAccepted.current = true;
+  }, [acceptChange]);
+
+  // Auto-save when status becomes unsaved after accepting a change
+  useEffect(() => {
+    if (justAccepted.current && saveStatus === "unsaved" && chatId) {
+      justAccepted.current = false;
+      saveCode();
+    }
+  }, [saveStatus, chatId, saveCode]);
 
   // Vertical resize handler (panel height)
   const handleVerticalMouseDown = useCallback((e: React.MouseEvent) => {
@@ -161,7 +197,11 @@ export function CodeEditor() {
           if (data.languages.length > 0 && !selectedLanguage) {
             const defaultLang = data.languages.find((l: Language) => l.extension === "cpp") || data.languages[0];
             setSelectedLanguage(defaultLang);
-            if (!code.trim()) {
+            // Load saved code if available, otherwise use default
+            const savedCode = getSavedCodeForLanguage(defaultLang.extension);
+            if (savedCode) {
+              setCode(savedCode);
+            } else if (!code.trim()) {
               setCode(DEFAULT_CODE[defaultLang.extension] || "");
             }
           }
@@ -172,13 +212,18 @@ export function CodeEditor() {
     };
 
     fetchLanguages();
-  }, [selectedLanguage, code, setSelectedLanguage, setCode]);
+  }, [selectedLanguage, code, setSelectedLanguage, setCode, getSavedCodeForLanguage]);
 
   const handleLanguageChange = (languageId: string) => {
     const lang = languages.find((l) => l.id.toString() === languageId);
     if (lang) {
       setSelectedLanguage(lang);
-      if (!code.trim() || Object.values(DEFAULT_CODE).includes(code)) {
+      // First check if there's saved code for this language
+      const savedCode = getSavedCodeForLanguage(lang.extension);
+      if (savedCode) {
+        setCode(savedCode);
+      } else if (!code.trim() || Object.values(DEFAULT_CODE).includes(code)) {
+        // Only set default code if no saved code and current code is empty/default
         setCode(DEFAULT_CODE[lang.extension] || "");
       }
     }
@@ -248,7 +293,7 @@ export function CodeEditor() {
   return (
     <div ref={containerRef} className="h-full flex flex-col bg-white">
       {/* Toolbar */}
-      <div className="flex items-center justify-between p-2 border-b border-border">
+      <div className="relative flex items-center justify-between p-2 border-b border-border">
         <div className="flex items-center gap-2">
           <Select
             value={selectedLanguage?.id.toString() || ""}
@@ -267,6 +312,24 @@ export function CodeEditor() {
             </SelectContent>
           </Select>
         </div>
+        {/* Save Status Indicator - Centered */}
+        {chatId && selectedLanguage && (
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 text-xs">
+            {saveStatus === "saving" ? (
+              <span className="text-muted-foreground flex items-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Saving...
+              </span>
+            ) : saveStatus === "unsaved" ? (
+              <span className="text-muted-foreground">Unsaved changes</span>
+            ) : (
+              <span className="text-green-600 flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                Saved
+              </span>
+            )}
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <Button
             onClick={handleReset}
@@ -372,7 +435,7 @@ export function CodeEditor() {
                 <Button
                   size="sm"
                   className="gap-1.5 bg-green-600 hover:bg-green-700"
-                  onClick={acceptChange}
+                  onClick={handleAcceptChange}
                 >
                   <Check className="h-3.5 w-3.5" />
                   Accept

@@ -142,6 +142,29 @@ export async function PATCH(
       return NextResponse.json({ success: true, messagesCleared: true });
     }
 
+    // Handle save code action
+    if (body.action === "save_code") {
+      const { languageExtension, code } = body;
+      
+      if (!languageExtension || typeof code !== "string") {
+        return NextResponse.json(
+          { error: "Missing languageExtension or code" },
+          { status: 400 }
+        );
+      }
+
+      // Get current codeByLanguage and update it
+      const currentCode = (chat.codeByLanguage as Record<string, string>) || {};
+      const updatedCode = { ...currentCode, [languageExtension]: code };
+
+      await prisma.chat.update({
+        where: { id },
+        data: { codeByLanguage: updatedCode },
+      });
+
+      return NextResponse.json({ success: true, codeByLanguage: updatedCode });
+    }
+
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
     console.error("Error updating chat:", error);

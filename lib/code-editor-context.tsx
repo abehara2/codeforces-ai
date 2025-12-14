@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode } from "react";
 
 interface Language {
   id: number;
@@ -13,6 +13,8 @@ interface PendingCodeChange {
   description: string;
 }
 
+type SaveStatus = "saved" | "unsaved" | "saving";
+
 interface CodeEditorContextType {
   code: string;
   setCode: (code: string) => void;
@@ -23,21 +25,106 @@ interface CodeEditorContextType {
   lastChangeResult: "accepted" | "rejected" | null;
   acceptChange: () => void;
   rejectChange: () => void;
+  // Save functionality
+  chatId: string | null;
+  saveStatus: SaveStatus;
+  saveCode: () => Promise<void>;
+  initializeCode: (savedCode: Record<string, string>) => void;
+  getSavedCodeForLanguage: (extension: string) => string | undefined;
 }
 
 const CodeEditorContext = createContext<CodeEditorContextType | null>(null);
 
-export function CodeEditorProvider({ children }: { children: ReactNode }) {
-  const [code, setCode] = useState("");
-  const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(null);
+interface CodeEditorProviderProps {
+  children: ReactNode;
+  chatId?: string | null;
+  initialCodeByLanguage?: Record<string, string>;
+}
+
+export function CodeEditorProvider({ 
+  children, 
+  chatId = null, 
+  initialCodeByLanguage = {} 
+}: CodeEditorProviderProps) {
+  const [code, setCodeState] = useState("");
+  const [selectedLanguage, setSelectedLanguageState] = useState<Language | null>(null);
   const [pendingChange, setPendingChange] = useState<PendingCodeChange | null>(null);
   const [lastChangeResult, setLastChangeResult] = useState<"accepted" | "rejected" | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+  
+  // Store saved code per language
+  const savedCodeByLanguage = useRef<Record<string, string>>(initialCodeByLanguage);
+  const lastSavedCode = useRef<string>("");
+
+  // Initialize saved code from props
+  const initializeCode = useCallback((savedCode: Record<string, string>) => {
+    savedCodeByLanguage.current = savedCode;
+  }, []);
+
+  // Get saved code for a specific language
+  const getSavedCodeForLanguage = useCallback((extension: string): string | undefined => {
+    return savedCodeByLanguage.current[extension];
+  }, []);
+
+  // Custom setCode that tracks unsaved changes
+  const setCode = useCallback((newCode: string) => {
+    setCodeState(newCode);
+    // Check if code differs from last saved
+    if (newCode !== lastSavedCode.current) {
+      setSaveStatus("unsaved");
+    }
+  }, []);
+
+  // Custom setSelectedLanguage that loads saved code for that language
+  const setSelectedLanguage = useCallback((language: Language | null) => {
+    setSelectedLanguageState(language);
+    if (language) {
+      const savedCode = savedCodeByLanguage.current[language.extension] || "";
+      lastSavedCode.current = savedCode;
+      // Don't mark as unsaved when switching languages
+      setSaveStatus("saved");
+    }
+  }, []);
+
+  // Save code to the database
+  const saveCode = useCallback(async () => {
+    if (!chatId || !selectedLanguage || saveStatus === "saving") return;
+
+    setSaveStatus("saving");
+    
+    try {
+      const response = await fetch(`/api/chats/${chatId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_code",
+          languageExtension: selectedLanguage.extension,
+          code,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        savedCodeByLanguage.current = data.codeByLanguage;
+        lastSavedCode.current = code;
+        setSaveStatus("saved");
+      } else {
+        console.error("Failed to save code");
+        setSaveStatus("unsaved");
+      }
+    } catch (error) {
+      console.error("Error saving code:", error);
+      setSaveStatus("unsaved");
+    }
+  }, [chatId, selectedLanguage, code, saveStatus]);
 
   const acceptChange = useCallback(() => {
     if (pendingChange) {
-      setCode(pendingChange.code);
+      setCodeState(pendingChange.code);
       setPendingChange(null);
       setLastChangeResult("accepted");
+      // Mark as unsaved since code changed
+      setSaveStatus("unsaved");
     }
   }, [pendingChange]);
 
@@ -66,6 +153,11 @@ export function CodeEditorProvider({ children }: { children: ReactNode }) {
         lastChangeResult,
         acceptChange,
         rejectChange,
+        chatId,
+        saveStatus,
+        saveCode,
+        initializeCode,
+        getSavedCodeForLanguage,
       }}
     >
       {children}

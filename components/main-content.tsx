@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Code2, FileText, ExternalLink, PanelLeft, PanelRight } from "lucide-react";
 import { CodeEditor } from "@/components/code-editor";
 import { ProblemStatement } from "@/components/problem-statement";
@@ -13,7 +13,24 @@ interface MainContentProps {
 }
 
 export function MainContent({ problemId, problemHtml }: MainContentProps) {
-  const [activeTab, setActiveTab] = useState<"code" | "problem">("problem");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  
+  const tabParam = searchParams.get("tab");
+  const activeTab = tabParam === "code" ? "code" : "problem";
+  
+  const setActiveTab = (tab: "code" | "problem") => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (tab === "problem") {
+      params.delete("tab");
+    } else {
+      params.set("tab", tab);
+    }
+    const query = params.toString();
+    router.replace(`${pathname}${query ? `?${query}` : ""}`, { scroll: false });
+  };
+  
   const { collapsed, setCollapsed, chatCollapsed, setChatCollapsed } = useSidebar();
 
   const hasProblem = Boolean(problemId);

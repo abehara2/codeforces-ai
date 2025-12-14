@@ -53,6 +53,7 @@ export default async function ChatPage({ params }: ChatPageProps) {
       problemId={chat.problemId}
       problemHtml={chat.problemHtml}
       messages={messages}
+      codeByLanguage={(chat.codeByLanguage as Record<string, string>) || {}}
     />
   );
 }
