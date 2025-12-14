@@ -46,15 +46,12 @@ export async function POST(request: Request) {
       );
     }
 
-    let JUDGE0_API_URL = process.env.JUDGE0_API_URL || "https://judge0-ce.p.rapidapi.com";
-    if (!JUDGE0_API_URL.startsWith("http://") && !JUDGE0_API_URL.startsWith("https://")) {
-      JUDGE0_API_URL = `https://${JUDGE0_API_URL}`;
-    }
+    const JUDGE0_API_URL = process.env.JUDGE0_API_URL;
     const JUDGE0_API_KEY = process.env.JUDGE0_API_KEY;
 
-    if (!JUDGE0_API_KEY) {
+    if (!JUDGE0_API_URL || !JUDGE0_API_KEY) {
       return NextResponse.json(
-        { error: "Judge0 API key not configured" },
+        { error: "Judge0 API not configured" },
         { status: 500 }
       );
     }
