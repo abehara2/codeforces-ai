@@ -1,6 +1,5 @@
 "use client";
 
-import { ChatSidebar } from "@/components/chat-sidebar";
 import { MainContent } from "@/components/main-content";
 import { ChatPanel } from "@/components/chat-panel";
 import { CodeEditorProvider } from "@/lib/code-editor-context";
@@ -27,16 +26,11 @@ export function ChatPageContent({
 }: ChatPageContentProps) {
   return (
     <CodeEditorProvider>
-      <div className="h-screen flex overflow-hidden">
-        {/* Left Sidebar - Chat List */}
-        <ChatSidebar />
+      {/* Main Content with Tabs */}
+      <MainContent problemId={problemId} problemHtml={problemHtml} />
 
-        {/* Main Content with Tabs */}
-        <MainContent problemId={problemId} problemHtml={problemHtml} />
-
-        {/* Right Sidebar - Chat */}
-        <ChatPanel chatId={chatId} initialMessages={messages} />
-      </div>
+      {/* Right Sidebar - Chat */}
+      <ChatPanel chatId={chatId} initialMessages={messages} />
     </CodeEditorProvider>
   );
 }

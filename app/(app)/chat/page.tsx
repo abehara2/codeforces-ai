@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { ChatSidebar } from "@/components/chat-sidebar";
 import { CodeEditor } from "@/components/code-editor";
 import { EmptyChatPanel } from "@/components/empty-chat-panel";
 import { WelcomeScreen } from "@/components/welcome-screen";
@@ -29,21 +28,15 @@ export default async function ChatPage() {
   // No chats - show welcome screen without AI panel
   if (!hasChats) {
     return (
-      <div className="h-screen flex overflow-hidden">
-        <ChatSidebar />
-        <div className="flex-1 flex items-center justify-center bg-[#fafafa]">
-          <WelcomeScreen />
-        </div>
+      <div className="flex-1 flex items-center justify-center bg-[#fafafa]">
+        <WelcomeScreen />
       </div>
     );
   }
 
   // Has chats - show full layout
   return (
-    <div className="h-screen flex overflow-hidden">
-      {/* Left Sidebar - Chat List */}
-      <ChatSidebar />
-
+    <>
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
@@ -61,6 +54,6 @@ export default async function ChatPage() {
 
       {/* Right Sidebar - Chat */}
       <EmptyChatPanel hasChats={true} />
-    </div>
+    </>
   );
 }

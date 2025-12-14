@@ -208,8 +208,10 @@ export function ChatSidebar() {
                   <Link
                     key={chat.id}
                     href={`/chat/${chat.id}`}
-                    className={`group flex items-center justify-between px-2 py-2 text-sm hover:bg-accent ${
-                      isActive ? "bg-accent" : ""
+                    className={`group flex items-center justify-between px-2 py-2 text-sm transition-colors ${
+                      isActive
+                        ? "bg-primary/15 text-primary font-medium border-l-2 border-primary"
+                        : "hover:bg-accent"
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0">
