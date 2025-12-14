@@ -11,7 +11,7 @@ const spaceMono = Space_Mono({
 
 export const metadata: Metadata = {
   title: "Codeforces AI",
-  description: "AI-powered Codeforces problem solving assistant",
+  description: "made by Ashank Behara",
 };
 
 export default function RootLayout({
