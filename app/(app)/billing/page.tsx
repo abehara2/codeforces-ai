@@ -58,10 +58,12 @@ export default function BillingPage() {
       const data = await response.json();
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        console.error("Checkout failed:", data.error);
+        setCheckoutLoading(false);
       }
     } catch (error) {
       console.error("Checkout failed:", error);
-    } finally {
       setCheckoutLoading(false);
     }
   };

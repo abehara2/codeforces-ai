@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import puppeteer from "puppeteer";
 
 export interface ProblemData {
   html: string;
@@ -70,76 +71,94 @@ export async function fetchCodeforcesProblem(problemUrl: string): Promise<Proble
   
   console.log("[fetchCodeforcesProblem] Fetching from URL:", url);
 
-  // Use headers that closely mimic a real browser request
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-      "Accept-Language": "en-US,en;q=0.9",
-      "Accept-Encoding": "gzip, deflate, br",
-      "Cache-Control": "no-cache",
-      "Pragma": "no-cache",
-      "Sec-Ch-Ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
-      "Sec-Ch-Ua-Mobile": "?0",
-      "Sec-Ch-Ua-Platform": '"macOS"',
-      "Sec-Fetch-Dest": "document",
-      "Sec-Fetch-Mode": "navigate",
-      "Sec-Fetch-Site": "none",
-      "Sec-Fetch-User": "?1",
-      "Upgrade-Insecure-Requests": "1",
-    },
-    redirect: "follow",
-  });
+  let browser;
+  try {
+    // Launch headless browser
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--disable-gpu",
+      ],
+    });
 
-  console.log("[fetchCodeforcesProblem] Response status:", response.status);
+    const page = await browser.newPage();
+    
+    // Set a realistic user agent
+    await page.setUserAgent(
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    );
 
-  if (!response.ok) {
-    if (response.status === 403) {
-      throw new Error("Codeforces is blocking requests. Please try again in a few seconds.");
+    // Navigate to the problem page
+    const response = await page.goto(url, {
+      waitUntil: "domcontentloaded",
+      timeout: 30000,
+    });
+
+    if (!response) {
+      throw new Error("Failed to load page");
     }
-    if (response.status === 404) {
+
+    const status = response.status();
+    console.log("[fetchCodeforcesProblem] Response status:", status);
+
+    if (status === 404) {
       throw new Error("Problem not found on Codeforces. Check if the URL is correct.");
     }
-    throw new Error(`Failed to fetch problem (HTTP ${response.status})`);
-  }
 
-  const htmlContent = await response.text();
-  console.log("[fetchCodeforcesProblem] HTML content length:", htmlContent.length);
-  
-  const $ = cheerio.load(htmlContent);
-
-  // Extract the problem statement from problemindexholder class
-  const problemHolder = $(".problemindexholder");
-  console.log("[fetchCodeforcesProblem] problemindexholder elements found:", problemHolder.length);
-
-  if (problemHolder.length === 0) {
-    // Check for common error indicators
-    if (htmlContent.includes("Codeforces is temporarily unavailable")) {
-      throw new Error("Codeforces is temporarily unavailable. Please try again later.");
+    if (status !== 200) {
+      throw new Error(`Failed to fetch problem (HTTP ${status})`);
     }
-    if (htmlContent.includes("Just a moment")) {
-      throw new Error("Codeforces is showing a challenge page. Please try again in a moment.");
+
+    // Wait for the problem content to appear
+    await page.waitForSelector(".problemindexholder", { timeout: 10000 }).catch(() => {
+      // If selector not found, continue and check content
+    });
+
+    const htmlContent = await page.content();
+    console.log("[fetchCodeforcesProblem] HTML content length:", htmlContent.length);
+
+    const $ = cheerio.load(htmlContent);
+
+    // Extract the problem statement from problemindexholder class
+    const problemHolder = $(".problemindexholder");
+    console.log("[fetchCodeforcesProblem] problemindexholder elements found:", problemHolder.length);
+
+    if (problemHolder.length === 0) {
+      // Check for common error indicators
+      if (htmlContent.includes("Codeforces is temporarily unavailable")) {
+        throw new Error("Codeforces is temporarily unavailable. Please try again later.");
+      }
+      if (htmlContent.includes("Just a moment")) {
+        throw new Error("Codeforces is showing a challenge page. Please try again in a moment.");
+      }
+      
+      throw new Error("Could not find problem content. The problem may not exist.");
     }
-    
-    throw new Error("Could not find problem content. The problem may not exist.");
+
+    // Get the HTML content
+    const html = problemHolder.html() || "";
+
+    // Also extract plain text for AI context
+    const text = problemHolder.text().trim();
+
+    // Extract problem title
+    const title = $(".title").first().text().trim();
+    console.log("[fetchCodeforcesProblem] Problem title:", title);
+
+    return {
+      html,
+      text,
+      title,
+      url,
+      problemId,
+    };
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
   }
-
-  // Get the HTML content
-  const html = problemHolder.html() || "";
-
-  // Also extract plain text for AI context
-  const text = problemHolder.text().trim();
-
-  // Extract problem title
-  const title = $(".title").first().text().trim();
-  console.log("[fetchCodeforcesProblem] Problem title:", title);
-
-  return {
-    html,
-    text,
-    title,
-    url,
-    problemId,
-  };
 }

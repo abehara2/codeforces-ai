@@ -14,6 +14,8 @@ interface MainContentProps {
 export function MainContent({ problemId, problemHtml }: MainContentProps) {
   const [activeTab, setActiveTab] = useState<"code" | "problem">("problem");
 
+  const hasProblem = Boolean(problemId);
+
   return (
     <div className="flex-1 flex flex-col min-w-0">
       {/* Header with Tabs */}
@@ -31,6 +33,7 @@ export function MainContent({ problemId, problemHtml }: MainContentProps) {
             <FileText className="h-4 w-4" />
             PROBLEM
           </button>
+          {hasProblem && (
           <button
             onClick={() => setActiveTab("code")}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded transition-colors ${
@@ -42,10 +45,12 @@ export function MainContent({ problemId, problemHtml }: MainContentProps) {
             <Code2 className="h-4 w-4" />
             CODE
           </button>
+          )}
           
         </div>
 
         {/* Problem ID Link */}
+        {hasProblem && (
         <a
           href={`https://codeforces.com/problemset/problem/${problemId}`}
           target="_blank"
@@ -55,14 +60,20 @@ export function MainContent({ problemId, problemHtml }: MainContentProps) {
           {problemId}
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
+        )}
       </header>
 
       {/* Content Area */}
       <div className="flex-1 min-h-0">
-        {activeTab === "code" ? (
+        {activeTab === "code" && hasProblem ? (
           <CodeEditor />
         ) : (
           <ScrollArea className="h-full">
+            {hasProblem && (
+              <h1 className="text-2xl font-bold px-4 pt-4">
+                {problemId.split("/")[0]}
+              </h1>
+            )}
             <ProblemStatement html={problemHtml} />
           </ScrollArea>
         )}

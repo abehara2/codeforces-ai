@@ -55,50 +55,18 @@ export function parseCodeforcesUrl(input: string): { contestId: string; problemI
 }
 
 export async function fetchCodeforcesProblemClient(problemUrl: string): Promise<ProblemData> {
-  const { contestId, problemIndex, url } = parseCodeforcesUrl(problemUrl);
-  const problemId = `${contestId}/${problemIndex}`;
+  // Validate URL format first
+  parseCodeforcesUrl(problemUrl);
 
-  // Use allorigins.win as a CORS proxy - it fetches the page and returns it
-  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-  
-  console.log("[Client] Fetching via CORS proxy:", proxyUrl);
-
-  const response = await fetch(proxyUrl);
+  // Use server-side API to fetch (avoids CORS issues)
+  const response = await fetch(`/api/problem?url=${encodeURIComponent(problemUrl)}`);
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch problem (HTTP ${response.status})`);
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || `Failed to fetch problem (HTTP ${response.status})`);
   }
 
-  const htmlContent = await response.text();
-  console.log("[Client] HTML content length:", htmlContent.length);
-
-  // Parse HTML using DOMParser (browser API)
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(htmlContent, "text/html");
-
-  // Extract the problem statement from problemindexholder class
-  const problemHolder = doc.querySelector(".problemindexholder");
-
-  if (!problemHolder) {
-    if (htmlContent.includes("Codeforces is temporarily unavailable")) {
-      throw new Error("Codeforces is temporarily unavailable");
-    }
-    throw new Error("Could not find problem content");
-  }
-
-  const html = problemHolder.innerHTML;
-  const text = problemHolder.textContent?.trim() || "";
-  const titleEl = doc.querySelector(".title");
-  const title = titleEl?.textContent?.trim() || "";
-
-  console.log("[Client] Problem fetched:", { problemId, title, htmlLength: html.length });
-
-  return {
-    html,
-    text,
-    title,
-    url,
-    problemId,
-  };
+  const data = await response.json();
+  return data as ProblemData;
 }
 

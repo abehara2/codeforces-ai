@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { MessageSquare, Trash2, LogOut, CreditCard } from "lucide-react";
+import { MessageSquare, Trash2, LogOut, CreditCard, Star } from "lucide-react";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -26,6 +26,7 @@ export function ChatSidebar() {
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const [isDragging, setIsDragging] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
@@ -95,8 +96,21 @@ export function ChatSidebar() {
     }
   };
 
+  const fetchSubscription = async () => {
+    try {
+      const response = await fetch("/api/stripe/subscription");
+      if (response.ok) {
+        const data = await response.json();
+        setIsSubscribed(data.isSubscribed);
+      }
+    } catch (error) {
+      console.error("Failed to fetch subscription:", error);
+    }
+  };
+
   useEffect(() => {
     fetchChats();
+    fetchSubscription();
   }, []);
 
   const handleDelete = async (e: React.MouseEvent, chatId: string) => {
@@ -150,8 +164,11 @@ export function ChatSidebar() {
             </div>
           )}
           <div className="flex-1 min-w-0 text-left">
-            <p className="text-sm font-medium truncate">
+            <p className="text-sm font-medium truncate flex items-center gap-1">
               {user?.fullName || user?.username || "User"}
+              {isSubscribed && (
+                <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400 flex-shrink-0" />
+              )}
             </p>
             <p className="text-xs text-muted-foreground truncate">
               {user?.primaryEmailAddress?.emailAddress}

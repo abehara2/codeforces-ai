@@ -18,8 +18,9 @@ export async function POST() {
     });
 
     if (!dbUser) {
+      const email = user.emailAddresses[0]?.emailAddress;
       dbUser = await prisma.user.create({
-        data: { clerkId: userId },
+        data: { clerkId: userId, email },
       });
     }
 

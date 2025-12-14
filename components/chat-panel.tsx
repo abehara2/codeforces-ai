@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Loader2, Bot, User, Code2, Check, X } from "lucide-react";
+import { Send, Loader2, Bot, User, Code2, Check, X, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Streamdown, defaultRehypePlugins } from "streamdown";
@@ -41,10 +42,12 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
   const [streamingContent, setStreamingContent] = useState("");
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const [isDragging, setIsDragging] = useState(false);
+  const [limitReached, setLimitReached] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const lastToolCallMessageId = useRef<string | null>(null);
+  const router = useRouter();
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -132,6 +135,13 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
       });
 
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData.error === "MESSAGE_LIMIT_REACHED") {
+          setLimitReached(true);
+          // Remove the temp user message we just added
+          setMessages((prev) => prev.filter((m) => m.id !== tempUserMessage.id));
+          return;
+        }
         throw new Error("Failed to send message");
       }
 
@@ -343,32 +353,54 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
         </div>
       </div>
 
-      {/* Input */}
-      <form onSubmit={handleSubmit} className="p-3 border-t border-border">
-        <div className="flex gap-2">
-          <Textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask about the problem..."
-            className="min-h-[60px] max-h-[120px] resize-none text-sm"
-            disabled={isStreaming}
-          />
-          <Button
-            type="submit"
-            size="icon"
-            disabled={!input.trim() || isStreaming}
-            className="self-end"
-          >
-            {isStreaming ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
+      {/* Input or Upgrade Prompt */}
+      {limitReached ? (
+        <div className="p-4 border-t border-border bg-purple-50">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-10 h-10 bg-purple-100 rounded-full mb-3">
+              <Sparkles className="h-5 w-5 text-purple-600" />
+            </div>
+            <p className="text-sm font-medium text-purple-900 mb-1">
+              Message limit reached
+            </p>
+            <p className="text-xs text-purple-700 mb-3">
+              Please upgrade your account to send more messages
+            </p>
+            <Button
+              onClick={() => router.push("/billing")}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              Upgrade Now
+            </Button>
+          </div>
         </div>
-      </form>
+      ) : (
+        <form onSubmit={handleSubmit} className="p-3 border-t border-border">
+          <div className="flex gap-2">
+            <Textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about the problem..."
+              className="min-h-[60px] max-h-[120px] resize-none text-sm"
+              disabled={isStreaming}
+            />
+            <Button
+              type="submit"
+              size="icon"
+              disabled={!input.trim() || isStreaming}
+              className="self-end"
+            >
+              {isStreaming ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

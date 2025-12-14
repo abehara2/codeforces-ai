@@ -54,13 +54,39 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get the chat with problem context
+    // Get the user with subscription info
     const user = await prisma.user.findUnique({
       where: { clerkId },
     });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Check if user is subscribed (has active subscription that hasn't expired)
+    const isSubscribed = Boolean(
+      user.stripeSubscriptionId &&
+      user.stripeCurrentPeriodEnd &&
+      user.stripeCurrentPeriodEnd.getTime() > Date.now()
+    );
+
+    // If not subscribed, check message limit
+    if (!isSubscribed) {
+      const assistantMessageCount = await prisma.message.count({
+        where: {
+          role: "assistant",
+          chat: {
+            userId: user.id,
+          },
+        },
+      });
+
+      if (assistantMessageCount >= 5) {
+        return NextResponse.json(
+          { error: "MESSAGE_LIMIT_REACHED" },
+          { status: 403 }
+        );
+      }
     }
 
     const chat = await prisma.chat.findFirst({
