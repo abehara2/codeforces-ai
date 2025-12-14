@@ -8,10 +8,14 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  clerkId   String   @unique
-  createdAt DateTime @default(now())
-  chats     Chat[]
+  id                     String    @id @default(cuid())
+  clerkId                String    @unique
+  createdAt              DateTime  @default(now())
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  chats                  Chat[]
 }
 
 model Chat {

@@ -122,7 +122,7 @@ Guidelines:
 
     // Call OpenAI API with streaming and tools
     const response = await openai.responses.create({
-      model: "gpt-4.1-mini-2025-04-14",
+      model: "gpt-4.1-2025-04-14",
       input: [
         { role: "system", content: systemPrompt },
         ...conversationHistory,
