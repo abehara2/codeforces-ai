@@ -6,8 +6,11 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (skip postinstall as we'll install browsers separately)
+RUN npm ci --ignore-scripts
+
+# Install Playwright browsers (base image has system deps)
+RUN npx playwright install chromium
 
 # Copy source code
 COPY . .

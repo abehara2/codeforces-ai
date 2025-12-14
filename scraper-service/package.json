@@ -6,12 +6,13 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "postinstall": "npx playwright install chromium --with-deps"
   },
   "dependencies": {
     "cheerio": "^1.1.2",
     "express": "^4.21.0",
-    "playwright": "^1.48.0",
+    "playwright": "1.48.0",
     "playwright-extra": "^4.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
