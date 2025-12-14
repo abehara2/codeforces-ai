@@ -31,7 +31,9 @@ const tools: OpenAI.Responses.Tool[] = [
         },
       },
       required: ["code", "description"],
+      additionalProperties: false,
     },
+    strict: true,
   },
 ];
 

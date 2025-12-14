@@ -35,7 +35,6 @@ export function NewProblemPrompt() {
         body: JSON.stringify({
           problemId: problemData.problemId,
           problemHtml: problemData.html,
-          problemCssUrls: problemData.cssUrls,
         }),
       });
 
