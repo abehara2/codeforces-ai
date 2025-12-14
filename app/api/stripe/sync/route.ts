@@ -36,8 +36,8 @@ export async function POST() {
     if (subscriptions.data.length > 0) {
       const subscription = subscriptions.data[0];
       // current_period_end may be on subscription or on items depending on API version
-      const periodEnd = subscription.current_period_end ?? 
-        (subscription.items.data[0] as { current_period_end?: number })?.current_period_end;
+      const periodEnd = (subscription as unknown as { current_period_end?: number }).current_period_end ?? 
+        (subscription.items.data[0] as unknown as { current_period_end?: number })?.current_period_end;
       const currentPeriodEnd = periodEnd ? new Date(periodEnd * 1000) : null;
       
       await prisma.user.update({

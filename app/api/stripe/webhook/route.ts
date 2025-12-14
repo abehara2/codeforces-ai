@@ -6,8 +6,8 @@ import { prisma } from "@/lib/prisma";
 
 // Helper to get current_period_end from subscription (may be on items in newer API versions)
 function getSubscriptionPeriodEnd(subscription: Stripe.Subscription): Date | null {
-  const periodEnd = (subscription as { current_period_end?: number }).current_period_end ??
-    (subscription.items.data[0] as { current_period_end?: number })?.current_period_end;
+  const periodEnd = (subscription as unknown as { current_period_end?: number }).current_period_end ??
+    (subscription.items.data[0] as unknown as { current_period_end?: number })?.current_period_end;
   return periodEnd ? new Date(periodEnd * 1000) : null;
 }
 
