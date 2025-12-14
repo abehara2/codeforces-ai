@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { SelectProblemContent } from "@/components/select-problem-content";
 import { WelcomeScreen } from "@/components/welcome-screen";
 
 export default async function ChatPage() {
@@ -24,15 +23,15 @@ export default async function ChatPage() {
 
   const hasChats = !!(user && user.chats.length > 0);
 
-  // No chats - show welcome screen without AI panel
-  if (!hasChats) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-[#fafafa]">
-        <WelcomeScreen />
-      </div>
-    );
+  // Has chats - redirect to the most recent one
+  if (hasChats && user.chats[0]) {
+    redirect(`/chat/${user.chats[0].id}`);
   }
 
-  // Has chats - show full layout with CodeEditorProvider
-  return <SelectProblemContent />;
+  // No chats - show welcome screen
+  return (
+    <div className="flex-1 flex items-center justify-center bg-[#fafafa]">
+      <WelcomeScreen />
+    </div>
+  );
 }

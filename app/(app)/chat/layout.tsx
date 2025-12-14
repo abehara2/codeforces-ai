@@ -1,6 +1,7 @@
 "use client";
 
 import { ChatSidebar } from "@/components/chat-sidebar";
+import { SidebarProvider } from "@/lib/sidebar-context";
 
 export default function ChatLayout({
   children,
@@ -8,9 +9,11 @@ export default function ChatLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="h-screen flex overflow-hidden">
-      <ChatSidebar />
-      {children}
-    </div>
+    <SidebarProvider>
+      <div className="h-screen flex overflow-hidden">
+        <ChatSidebar />
+        {children}
+      </div>
+    </SidebarProvider>
   );
 }

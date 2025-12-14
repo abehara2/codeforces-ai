@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Code2, FileText, ExternalLink } from "lucide-react";
+import { Code2, FileText, ExternalLink, PanelLeft, PanelRight } from "lucide-react";
 import { CodeEditor } from "@/components/code-editor";
 import { ProblemStatement } from "@/components/problem-statement";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useSidebar } from "@/lib/sidebar-context";
 
 interface MainContentProps {
   problemId: string;
@@ -13,6 +14,7 @@ interface MainContentProps {
 
 export function MainContent({ problemId, problemHtml }: MainContentProps) {
   const [activeTab, setActiveTab] = useState<"code" | "problem">("problem");
+  const { collapsed, setCollapsed, chatCollapsed, setChatCollapsed } = useSidebar();
 
   const hasProblem = Boolean(problemId);
 
@@ -21,6 +23,16 @@ export function MainContent({ problemId, problemHtml }: MainContentProps) {
       {/* Header with Tabs */}
       <header className="h-12 flex items-center justify-between px-4 border-b border-border bg-white">
         <div className="flex items-center gap-1">
+          {/* Open sidebar button when collapsed */}
+          {collapsed && (
+            <button
+              onClick={() => setCollapsed(false)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-muted mr-1"
+              title="Open sidebar (⌘B)"
+            >
+              <PanelLeft className="h-4 w-4" />
+            </button>
+          )}
           {/* Tabs */}
           <button
             onClick={() => setActiveTab("problem")}
@@ -49,18 +61,29 @@ export function MainContent({ problemId, problemHtml }: MainContentProps) {
           
         </div>
 
-        {/* Problem ID Link */}
-        {hasProblem && (
-        <a
-          href={`https://codeforces.com/problemset/problem/${problemId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-sm font-mono text-black hover:underline"
-        >
-          {problemId}
-          <ExternalLink className="h-3.5 w-3.5" />
-        </a>
-        )}
+        {/* Right side: Problem ID Link and Chat toggle */}
+        <div className="flex items-center gap-2">
+          {hasProblem && (
+            <a
+              href={`https://codeforces.com/problemset/problem/${problemId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-sm font-mono text-black hover:underline"
+            >
+              {problemId}
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          )}
+          {chatCollapsed && (
+            <button
+              onClick={() => setChatCollapsed(false)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
+              title="Open AI panel (⌘`)"
+            >
+              <PanelRight className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Content Area */}

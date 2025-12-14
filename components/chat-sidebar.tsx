@@ -3,15 +3,17 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { MessageSquare, Trash2, LogOut, CreditCard, Star, Settings } from "lucide-react";
+import { MessageSquare, Trash2, LogOut, CreditCard, Settings, Search, Plus, PanelLeftClose } from "lucide-react";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { NewProblemModal } from "@/components/new-problem-modal";
+import { useSidebar } from "@/lib/sidebar-context";
 
 interface Chat {
   id: string;
   problemId: string;
+  title: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,12 +29,54 @@ export function ChatSidebar() {
   const [isDragging, setIsDragging] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; chatId: string } | null>(null);
+  const { collapsed, setCollapsed } = useSidebar();
   const sidebarRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
   const router = useRouter();
   const { signOut } = useClerk();
   const { user } = useUser();
+
+  // Cmd+K keyboard shortcut and close context menu on escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+      if (e.key === "Escape") {
+        setShowSearch(false);
+        setSearchQuery("");
+        setContextMenu(null);
+      }
+    };
+
+    const handleClick = () => setContextMenu(null);
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("click", handleClick);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("click", handleClick);
+    };
+  }, []);
+
+  // Focus search input when modal opens
+  useEffect(() => {
+    if (showSearch && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [showSearch]);
+
+  // Filter chats based on search query
+  const filteredChats = chats.filter((chat) =>
+    chat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    chat.problemId.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -140,17 +184,30 @@ export function ChatSidebar() {
     router.push("/");
   };
 
+  if (collapsed) {
+    return null;
+  }
+
   return (
     <div
       ref={sidebarRef}
       style={{ width }}
-      className="h-full flex flex-col border-r border-border bg-sidebar relative"
+      className="h-full flex flex-col border-r border-border bg-sidebar relative transition-all duration-200 ease-in-out"
     >
+      {/* Toggle button inside sidebar */}
+      <button
+        onClick={() => setCollapsed(true)}
+        className="absolute top-3 right-3 z-10 p-1 hover:bg-accent transition-colors"
+        title="Close sidebar (⌘B)"
+      >
+        <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
+      </button>
+
       {/* User Avatar & Menu */}
-      <div className="p-3 border-b border-border relative" ref={userMenuRef}>
+        <div className="p-3 border-b border-border relative" ref={userMenuRef}>
         <button
           onClick={() => setShowUserMenu(!showUserMenu)}
-          className="flex items-center gap-3 w-full p-2 hover:bg-accent transition-colors"
+          className="flex items-stretch gap-3 w-full p-2 hover:bg-accent transition-colors"
         >
           {user?.imageUrl ? (
             <img
@@ -163,16 +220,19 @@ export function ChatSidebar() {
               {user?.firstName?.[0] || user?.username?.[0] || "U"}
             </div>
           )}
-          <div className="flex-1 min-w-0 text-left">
-            <p className="text-sm font-medium truncate flex items-center gap-1">
-              {user?.fullName || user?.username || "User"}
-              {isSubscribed && (
-                <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400 flex-shrink-0" />
-              )}
+          <div className="flex-1 min-w-0 text-left flex flex-col justify-between">
+            <p className="text-sm font-medium truncate leading-none">
+              {(user?.fullName || user?.username || "User").trim().replace(/\s+/g, '\u2009')}
             </p>
-            <p className="text-xs text-muted-foreground truncate">
-              {user?.primaryEmailAddress?.emailAddress}
-            </p>
+            {isSubscribed ? (
+              <span className="px-1 py-px text-[9px] font-semibold bg-blue-500 text-white uppercase tracking-wide self-start">
+                Pro
+              </span>
+            ) : (
+              <span className="px-1 py-px text-[9px] font-semibold bg-neutral-400 text-white uppercase tracking-wide self-start">
+                Basic
+              </span>
+            )}
           </div>
         </button>
 
@@ -214,8 +274,18 @@ export function ChatSidebar() {
         )}
       </div>
 
+      {/* Search Bar */}
       <div className="p-3">
-        <NewProblemModal />
+        <button
+          onClick={() => setShowSearch(true)}
+          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-muted-foreground bg-muted/50 border border-border hover:bg-muted transition-colors"
+        >
+          <Search className="h-4 w-4" />
+          <span className="flex-1 text-left">Search...</span>
+          <kbd className="pointer-events-none h-5 select-none items-center gap-1 border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 flex">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        </button>
       </div>
 
       <Separator />
@@ -228,31 +298,28 @@ export function ChatSidebar() {
           {loading ? (
             <p className="text-sm text-muted-foreground px-2">Loading...</p>
           ) : chats.length > 0 && (
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {chats.map((chat) => {
                 const isActive = pathname === `/chat/${chat.id}`;
                 return (
                   <Link
                     key={chat.id}
                     href={`/chat/${chat.id}`}
-                    className={`group flex items-center justify-between px-2 py-2 text-sm transition-colors ${
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setContextMenu({ x: e.clientX, y: e.clientY, chatId: chat.id });
+                    }}
+                    className={`block px-2 py-1.5 text-sm transition-colors ${
                       isActive
-                        ? "bg-primary/15 text-primary font-medium border-l-2 border-primary"
-                        : "hover:bg-accent"
+                        ? "bg-white font-medium shadow-sm"
+                        : "hover:bg-white/50"
                     }`}
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <MessageSquare className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate font-mono">
-                        {chat.problemId}
-                      </span>
-                    </div>
-                    <button
-                      onClick={(e) => handleDelete(e, chat.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 text-destructive"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
+                    <span className="truncate block">
+                      {chat.title.includes('. ') ? chat.title.split('. ').slice(1).join('. ') : chat.title}
+                      {' '}
+                      <span className="text-muted-foreground">[{chat.problemId}]</span>
+                    </span>
                   </Link>
                 );
               })}
@@ -261,6 +328,18 @@ export function ChatSidebar() {
         </div>
       </ScrollArea>
 
+      {/* New Problem Card */}
+      <div className="p-3 border-t border-border">
+        <NewProblemModal
+          trigger={
+            <button className="flex items-center gap-2 w-full px-3 py-2.5 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
+              <Plus className="h-4 w-4" />
+              New Problem
+            </button>
+          }
+        />
+      </div>
+
       {/* Drag handle */}
       <div
         onMouseDown={handleMouseDown}
@@ -268,6 +347,90 @@ export function ChatSidebar() {
           isDragging ? "bg-primary/30" : ""
         }`}
       />
+
+      {/* Spotlight Search Modal */}
+      {showSearch && (
+        <div
+          className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
+          onClick={() => {
+            setShowSearch(false);
+            setSearchQuery("");
+          }}
+        >
+          <div
+            className="fixed left-1/2 top-[20%] -translate-x-1/2 w-full max-w-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="bg-popover border border-border shadow-2xl overflow-hidden">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+                <Search className="h-5 w-5 text-muted-foreground" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search problems..."
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                />
+                <kbd className="pointer-events-none h-5 select-none items-center gap-1 border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 flex">
+                  ESC
+                </kbd>
+              </div>
+              <div className="max-h-80 overflow-y-auto">
+                {filteredChats.length > 0 ? (
+                  <div className="py-2">
+                    {filteredChats.map((chat) => (
+                      <button
+                        key={chat.id}
+                        onClick={() => {
+                          router.push(`/chat/${chat.id}`);
+                          setShowSearch(false);
+                          setSearchQuery("");
+                        }}
+                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm hover:bg-accent transition-colors text-left"
+                      >
+                        <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="truncate">{chat.title.includes('. ') ? chat.title.split('. ').slice(1).join('. ') : chat.title}</p>
+                          <p className="text-xs text-muted-foreground font-mono">{chat.problemId}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : searchQuery ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    No problems found
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    Start typing to search...
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed z-50 bg-popover border border-border shadow-lg py-1 min-w-[140px]"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              handleDelete({ preventDefault: () => {}, stopPropagation: () => {} } as React.MouseEvent, contextMenu.chatId);
+              setContextMenu(null);
+            }}
+            className="flex items-center gap-2 w-full px-3 py-1.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete
+          </button>
+        </div>
+      )}
     </div>
   );
 }

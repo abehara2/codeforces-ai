@@ -8,9 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "stripe:webhook": "stripe listen --forward-to localhost:3000/api/stripe/webhook",
-    "clean:all": "npx dotenv-cli -e .env.development -- npx tsx scripts/clean-all.ts"
+    "clean:all": "npx dotenv-cli -e .env.development -- npx tsx scripts/clean-all.ts",
+    "sync:problems": "npx dotenv-cli -e .env.development -- npx tsx scripts/sync-problems.ts"
   },
   "dependencies": {
+    "@browserbasehq/sdk": "^2.0.0",
     "@clerk/nextjs": "^6.36.2",
     "@monaco-editor/react": "^4.7.0",
     "@prisma/client": "^5.22.0",
@@ -19,9 +21,7 @@
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
-    "@sparticuz/chromium-min": "^133.0.0",
     "@stripe/stripe-js": "^8.5.3",
-    "cheerio": "^1.1.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "katex": "^0.16.27",
@@ -29,11 +29,10 @@
     "next": "16.0.10",
     "openai": "^6.10.0",
     "prisma": "^5.22.0",
-    "puppeteer": "^24.33.0",
-    "puppeteer-core": "^22.6.0",
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "react-katex": "^3.1.0",
+    "selenium-webdriver": "^4.27.0",
     "streamdown": "^1.6.10",
     "stripe": "^20.0.0",
     "tailwind-merge": "^3.4.0"
@@ -44,6 +43,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-katex": "^3.0.4",
+    "@types/selenium-webdriver": "^4.1.28",
     "dotenv-cli": "^8.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.0.10",

@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Loader2, Bot, User, Code2, Check, X, Sparkles } from "lucide-react";
+import { ArrowRight, Loader2, Bot, User, Code2, Check, X, Sparkles, PanelRightClose } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Streamdown, defaultRehypePlugins } from "streamdown";
 import { useCodeEditor } from "@/lib/code-editor-context";
+import { useSidebar } from "@/lib/sidebar-context";
 
 // Exclude rehype-raw to prevent C++ includes like <iostream> from being parsed as HTML
 const rehypePlugins = [
@@ -36,6 +37,7 @@ const DEFAULT_WIDTH = 384;
 
 export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
   const { code, selectedLanguage, setPendingChange, pendingChange, lastChangeResult } = useCodeEditor();
+  const { chatCollapsed, setChatCollapsed } = useSidebar();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -231,11 +233,15 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
     }
   };
 
+  if (chatCollapsed) {
+    return null;
+  }
+
   return (
     <div
       ref={panelRef}
       style={{ width }}
-      className="h-full flex flex-col border-l border-border bg-white relative"
+      className="h-full flex flex-col border-l border-border bg-[#fafafa] relative"
     >
       {/* Drag handle */}
       <div
@@ -246,9 +252,16 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
       />
 
       {/* Header */}
-      <div className="p-3 border-b border-border">
+      <header className="h-12 flex items-center justify-between px-4 border-b border-border">
         <h2 className="text-sm font-bold">AI ASSISTANT</h2>
-      </div>
+        <button
+          onClick={() => setChatCollapsed(true)}
+          className="p-1 hover:bg-accent transition-colors"
+          title="Close AI panel (⌘`)"
+        >
+          <PanelRightClose className="h-4 w-4 text-muted-foreground" />
+        </button>
+      </header>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4" ref={scrollRef}>
@@ -375,7 +388,7 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="p-3 border-t border-border">
+        <form onSubmit={handleSubmit} className="p-3 border-t border-border bg-white">
           <div className="flex gap-2">
             <Textarea
               ref={textareaRef}
@@ -395,7 +408,7 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
               {isStreaming ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Send className="h-4 w-4" />
+                <ArrowRight className="h-4 w-4" />
               )}
             </Button>
           </div>

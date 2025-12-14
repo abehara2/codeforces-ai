@@ -29,7 +29,23 @@ export async function GET() {
       return NextResponse.json({ chats: [] });
     }
 
-    return NextResponse.json({ chats: user.chats });
+    // Get titles from ProblemCache
+    const problemIds = user.chats.map((chat) => chat.problemId);
+    const problemCaches = await prisma.problemCache.findMany({
+      where: { problemId: { in: problemIds } },
+      select: { problemId: true, title: true },
+    });
+
+    const titleMap = new Map(
+      problemCaches.map((p) => [p.problemId, p.title])
+    );
+
+    const chatsWithTitles = user.chats.map((chat) => ({
+      ...chat,
+      title: titleMap.get(chat.problemId) || chat.problemId,
+    }));
+
+    return NextResponse.json({ chats: chatsWithTitles });
   } catch (error) {
     console.error("Error fetching chats:", error);
     return NextResponse.json(

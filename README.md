@@ -1,36 +1,109 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Codeforces AI
+
+An AI-powered assistant for solving Codeforces competitive programming problems.
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 20+
+- PostgreSQL database
+- [Browserbase](https://browserbase.com) account (for problem sync)
+- [Stripe](https://stripe.com) account (for billing)
+- [Clerk](https://clerk.dev) account (for authentication)
+
+### Environment Variables
+
+Create a `.env.development` file with the following variables:
+
+```bash
+# Database
+DATABASE_URL="postgresql://..."
+
+# Clerk Auth
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_..."
+CLERK_SECRET_KEY="sk_..."
+
+# Stripe
+STRIPE_SECRET_KEY="sk_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_..."
+
+# Browserbase (for problem sync)
+BROWSERBASE_API_KEY="bb_..."
+BROWSERBASE_PROJECT_ID="..."
+
+# OpenAI
+OPENAI_API_KEY="sk_..."
+```
+
+### Installation
+
+```bash
+npm install
+npx prisma generate
+npx prisma db push
+```
+
+### Development
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Problem Sync
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Problems are pre-fetched and stored in the database using Browserbase. This allows instant problem lookups without scraping.
 
-## Learn More
+### Running the Sync
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# Sync all problems (full sync)
+npm run sync:problems
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Stop when hitting existing problems (incremental sync - good for cron jobs)
+npm run sync:problems -- --stop-on-dup
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Limit to N problems (useful for testing)
+npm run sync:problems -- --limit=100
 
-## Deploy on Vercel
+# Combine flags
+npm run sync:problems -- --stop-on-dup --limit=50
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Cron Job Setup
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For weekly syncs, set up a cron job to run:
+
+```bash
+npm run sync:problems -- --stop-on-dup
+```
+
+The `--stop-on-dup` flag makes incremental syncs efficient - it stops when it encounters a problem that's already in the database, assuming newer problems come first.
+
+## Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint |
+| `npm run sync:problems` | Sync Codeforces problems to database |
+| `npm run clean:all` | Clean all data (chats, users, etc.) |
+| `npm run stripe:webhook` | Forward Stripe webhooks locally |
+
+## Architecture
+
+- **Next.js 16** - React framework with App Router
+- **Prisma** - Database ORM
+- **Clerk** - Authentication
+- **Stripe** - Subscription billing
+- **Browserbase** - Problem scraping (via Selenium)
+- **OpenAI** - AI chat completions
+
+## License
+
+MIT
