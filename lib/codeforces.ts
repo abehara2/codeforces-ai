@@ -1,6 +1,7 @@
 import * as cheerio from "cheerio";
-import puppeteer from "puppeteer-core";
-import chromium from "@sparticuz/chromium-min";
+
+// Detect if running on Vercel/serverless
+const isVercel = process.env.VERCEL === "1";
 
 export interface ProblemData {
   html: string;
@@ -72,17 +73,38 @@ export async function fetchCodeforcesProblem(problemUrl: string): Promise<Proble
   
   console.log("[fetchCodeforcesProblem] Fetching from URL:", url);
 
-  let browser;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let browser: any = null;
   try {
-    // Launch headless browser with chromium for serverless environments
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: { width: 1920, height: 1080 },
-      executablePath: await chromium.executablePath(
-        "https://github.com/Sparticuz/chromium/releases/download/v143.0.0/chromium-v143.0.0-pack.tar"
-      ),
-      headless: true,
-    });
+    // Use different browser setup for local vs Vercel
+    if (isVercel) {
+      // Production: use puppeteer-core with chromium-min
+      const puppeteer = await import("puppeteer-core");
+      const chromium = await import("@sparticuz/chromium-min");
+      
+      browser = await puppeteer.default.launch({
+        args: chromium.default.args,
+        defaultViewport: { width: 1920, height: 1080 },
+        executablePath: await chromium.default.executablePath(
+          "https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar"
+        ),
+        headless: true,
+      });
+    } else {
+      // Local: use full puppeteer with bundled Chrome
+      const puppeteer = await import("puppeteer");
+      
+      browser = await puppeteer.default.launch({
+        headless: true,
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-accelerated-2d-canvas",
+          "--disable-gpu",
+        ],
+      });
+    }
 
     const page = await browser.newPage();
     
