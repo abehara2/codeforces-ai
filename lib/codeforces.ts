@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 
 export interface ProblemData {
   html: string;
@@ -73,16 +74,12 @@ export async function fetchCodeforcesProblem(problemUrl: string): Promise<Proble
 
   let browser;
   try {
-    // Launch headless browser
+    // Launch headless browser with chromium for serverless environments
     browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: { width: 1920, height: 1080 },
+      executablePath: await chromium.executablePath(),
       headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-accelerated-2d-canvas",
-        "--disable-gpu",
-      ],
     });
 
     const page = await browser.newPage();
