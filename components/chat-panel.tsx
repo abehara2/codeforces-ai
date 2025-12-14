@@ -43,7 +43,7 @@ const DEFAULT_WIDTH = 384;
 
 export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
   const { code, selectedLanguage, setPendingChange, pendingChange, lastChangeResult, setStdin } = useCodeEditor();
-  const { chatCollapsed, setChatCollapsed } = useSidebar();
+  const { chatCollapsed, setChatCollapsed, registerChatFocus } = useSidebar();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -88,6 +88,13 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
       document.body.style.userSelect = "";
     };
   }, [isDragging]);
+
+  // Register focus callback for Cmd+L shortcut
+  useEffect(() => {
+    registerChatFocus(() => {
+      textareaRef.current?.focus();
+    });
+  }, [registerChatFocus]);
 
   // Scroll to bottom on initial load
   useEffect(() => {
@@ -311,7 +318,7 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
         <button
           onClick={() => setChatCollapsed(true)}
           className="p-1 hover:bg-accent transition-colors"
-          title="Close AI panel (⌘`)"
+          title="Close AI panel (⌘G)"
         >
           <PanelRightClose className="h-4 w-4 text-muted-foreground" />
         </button>

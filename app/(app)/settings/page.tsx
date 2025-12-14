@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useClerk, useUser } from "@clerk/nextjs";
-import { ArrowLeft, AlertTriangle, Loader2, Trash2, Code2, Check, Github } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Loader2, Trash2, Code2, Check, Github, Keyboard } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -129,8 +129,8 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-2xl mx-auto px-6 py-12">
+    <div className="h-screen overflow-y-auto bg-background">
+      <div className="max-w-2xl mx-auto px-6 py-12 pb-24">
         <Link
           href="/chat"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-8"
@@ -227,6 +227,62 @@ export default function SettingsPage() {
                 </span>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Keyboard Shortcuts Card */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Keyboard className="h-5 w-5" />
+              Keyboard Shortcuts
+            </CardTitle>
+            <CardDescription>
+              Quick actions to speed up your workflow
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Run code</span>
+                <kbd className="px-2 py-1 text-xs font-mono bg-muted border border-black rounded">⌘ + Enter</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Submit solution</span>
+                <kbd className="px-2 py-1 text-xs font-mono bg-muted border border-black rounded">⌘ + Shift + Enter</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Toggle sidebar</span>
+                <kbd className="px-2 py-1 text-xs font-mono bg-muted border border-black rounded">⌘ + B</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Search</span>
+                <kbd className="px-2 py-1 text-xs font-mono bg-muted border border-black rounded">⌘ + K</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">New chat</span>
+                <kbd className="px-2 py-1 text-xs font-mono bg-muted border border-black rounded">⌘ + J</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Toggle code editor</span>
+                <kbd className="px-2 py-1 text-xs font-mono bg-muted border border-black rounded">⌘ + \</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Toggle problem panel</span>
+                <kbd className="px-2 py-1 text-xs font-mono bg-muted border border-black rounded">⌘ + '</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Focus chat input</span>
+                <kbd className="px-2 py-1 text-xs font-mono bg-muted border border-black rounded">⌘ + /</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Close modal / panel</span>
+                <kbd className="px-2 py-1 text-xs font-mono bg-muted border border-black rounded">Escape</kbd>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-4">
+              On Windows/Linux, use Ctrl instead of ⌘
+            </p>
           </CardContent>
         </Card>
 

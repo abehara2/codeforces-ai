@@ -319,7 +319,7 @@ export function ChatSidebar() {
                     }}
                     className={`block px-2 py-1.5 text-sm transition-colors ${
                       isActive
-                        ? "bg-white font-medium shadow-sm"
+                        ? "bg-white font-medium"
                         : "hover:bg-white/50"
                     }`}
                   >
