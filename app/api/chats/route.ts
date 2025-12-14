@@ -59,17 +59,14 @@ export async function POST(request: Request) {
     }
 
     // Find or create user
-    let user = await prisma.user.findUnique({
+    const clerkUser = await currentUser();
+    const email = clerkUser?.emailAddresses[0]?.emailAddress;
+    
+    const user = await prisma.user.upsert({
       where: { clerkId },
+      update: { email },
+      create: { clerkId, email },
     });
-
-    if (!user) {
-      const clerkUser = await currentUser();
-      const email = clerkUser?.emailAddresses[0]?.emailAddress;
-      user = await prisma.user.create({
-        data: { clerkId, email },
-      });
-    }
 
     // Create chat
     const chat = await prisma.chat.create({

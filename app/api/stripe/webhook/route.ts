@@ -4,10 +4,12 @@ import Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 
-// Extended type to include current_period_end which exists at runtime
-type SubscriptionWithPeriod = Stripe.Subscription & {
-  current_period_end: number;
-};
+// Helper to get current_period_end from subscription (may be on items in newer API versions)
+function getSubscriptionPeriodEnd(subscription: Stripe.Subscription): Date | null {
+  const periodEnd = (subscription as { current_period_end?: number }).current_period_end ??
+    (subscription.items.data[0] as { current_period_end?: number })?.current_period_end;
+  return periodEnd ? new Date(periodEnd * 1000) : null;
+}
 
 export async function POST(req: Request) {
   const body = await req.text();
@@ -47,7 +49,7 @@ export async function POST(req: Request) {
         if (session.mode === "subscription" && session.subscription) {
           const subscription = await stripe.subscriptions.retrieve(
             session.subscription as string
-          ) as unknown as SubscriptionWithPeriod;
+          );
 
           const customerId = session.customer as string;
 
@@ -84,9 +86,7 @@ export async function POST(req: Request) {
                 stripeCustomerId: customerId,
                 stripeSubscriptionId: subscription.id,
                 stripePriceId: subscription.items.data[0]?.price.id,
-                stripeCurrentPeriodEnd: new Date(
-                  subscription.current_period_end * 1000
-                ),
+                stripeCurrentPeriodEnd: getSubscriptionPeriodEnd(subscription),
               },
             });
             console.log(`[Stripe Webhook] Updated user ${user.id} with subscription ${subscription.id}`);
@@ -103,17 +103,13 @@ export async function POST(req: Request) {
 
         if (subscriptionId) {
           const subId = typeof subscriptionId === 'string' ? subscriptionId : subscriptionId.id;
-          const subscription = await stripe.subscriptions.retrieve(
-            subId
-          ) as unknown as SubscriptionWithPeriod;
+          const subscription = await stripe.subscriptions.retrieve(subId);
 
           await prisma.user.update({
             where: { stripeCustomerId: invoice.customer as string },
             data: {
               stripePriceId: subscription.items.data[0]?.price.id,
-              stripeCurrentPeriodEnd: new Date(
-                subscription.current_period_end * 1000
-              ),
+              stripeCurrentPeriodEnd: getSubscriptionPeriodEnd(subscription),
             },
           });
         }
@@ -121,22 +117,20 @@ export async function POST(req: Request) {
       }
 
       case "customer.subscription.updated": {
-        const subscription = event.data.object as SubscriptionWithPeriod;
+        const subscription = event.data.object as Stripe.Subscription;
 
         await prisma.user.update({
           where: { stripeCustomerId: subscription.customer as string },
           data: {
             stripePriceId: subscription.items.data[0]?.price.id,
-            stripeCurrentPeriodEnd: new Date(
-              subscription.current_period_end * 1000
-            ),
+            stripeCurrentPeriodEnd: getSubscriptionPeriodEnd(subscription),
           },
         });
         break;
       }
 
       case "customer.subscription.deleted": {
-        const subscription = event.data.object as SubscriptionWithPeriod;
+        const subscription = event.data.object as Stripe.Subscription;
 
         await prisma.user.update({
           where: { stripeCustomerId: subscription.customer as string },

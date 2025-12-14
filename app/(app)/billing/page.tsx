@@ -31,8 +31,21 @@ export default function BillingPage() {
   const canceled = searchParams.get("canceled");
 
   useEffect(() => {
-    fetchSubscription();
-  }, []);
+    // If returning from successful checkout, sync subscription first
+    if (success) {
+      syncSubscription().then(() => fetchSubscription());
+    } else {
+      fetchSubscription();
+    }
+  }, [success]);
+
+  const syncSubscription = async () => {
+    try {
+      await fetch("/api/stripe/sync", { method: "POST" });
+    } catch (error) {
+      console.error("Failed to sync subscription:", error);
+    }
+  };
 
   const fetchSubscription = async () => {
     try {
@@ -109,15 +122,6 @@ export default function BillingPage() {
           Manage your subscription and billing details.
         </p>
 
-        {success && (
-          <div className="mb-6 p-4 border border-green-500 bg-green-500/10 text-green-700">
-            <p className="font-medium">Payment successful!</p>
-            <p className="text-sm">
-              Your subscription is now active. Thank you for subscribing!
-            </p>
-          </div>
-        )}
-
         {canceled && (
           <div className="mb-6 p-4 border border-yellow-500 bg-yellow-500/10 text-yellow-700">
             <p className="font-medium">Payment canceled</p>
@@ -173,12 +177,19 @@ export default function BillingPage() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex flex-col gap-3">
               <Button
-                variant="outline"
+                disabled
+                className="w-full bg-green-600 hover:bg-green-600 text-white"
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Subscribed
+              </Button>
+              <Button
+                variant="ghost"
                 onClick={handlePortal}
                 disabled={portalLoading}
-                className="w-full"
+                className="w-full text-muted-foreground"
               >
                 {portalLoading ? (
                   <>

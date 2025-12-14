@@ -27,6 +27,17 @@ export async function POST() {
     // Check if user already has a Stripe customer
     let stripeCustomerId = dbUser.stripeCustomerId;
 
+    // Verify the customer exists in Stripe (handles test/live mode switches)
+    if (stripeCustomerId) {
+      try {
+        await stripe.customers.retrieve(stripeCustomerId);
+      } catch {
+        // Customer doesn't exist (likely due to test/live mode switch)
+        console.log(`[Stripe Checkout] Customer ${stripeCustomerId} not found, creating new one`);
+        stripeCustomerId = null;
+      }
+    }
+
     if (!stripeCustomerId) {
       // Create a new Stripe customer
       const customer = await stripe.customers.create({
@@ -46,6 +57,11 @@ export async function POST() {
       });
     }
 
+    // Debug: Log the price ID and key mode
+    const keyMode = process.env.STRIPE_SECRET_KEY?.startsWith('sk_live') ? 'LIVE' : 'TEST';
+    console.log(`[Stripe Checkout] Using price ID: ${PLANS.pro.priceId}`);
+    console.log(`[Stripe Checkout] Stripe key mode: ${keyMode}`);
+    
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,

@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { MessageSquare, Trash2, LogOut, CreditCard, Star } from "lucide-react";
+import { MessageSquare, Trash2, LogOut, CreditCard, Star, Settings } from "lucide-react";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -188,6 +188,16 @@ export function ChatSidebar() {
             >
               <CreditCard className="h-4 w-4" />
               Billing
+            </button>
+            <button
+              onClick={() => {
+                setShowUserMenu(false);
+                router.push("/settings");
+              }}
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-accent transition-colors"
+            >
+              <Settings className="h-4 w-4" />
+              Settings
             </button>
             <Separator />
             <button

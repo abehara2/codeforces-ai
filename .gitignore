@@ -9,6 +9,9 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+.env
+.env.development
+.env.production
 
 # testing
 /coverage
