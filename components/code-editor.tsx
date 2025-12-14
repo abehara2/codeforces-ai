@@ -187,23 +187,39 @@ export function CodeEditor() {
   }, [handleHorizontalMouseMove]);
 
   useEffect(() => {
-    const fetchLanguages = async () => {
+    const fetchLanguagesAndSettings = async () => {
       try {
-        const response = await fetch("/api/execute");
-        if (response.ok) {
-          const data = await response.json();
-          setLanguages(data.languages);
+        // Fetch languages and user settings in parallel
+        const [langResponse, settingsResponse] = await Promise.all([
+          fetch("/api/execute"),
+          fetch("/api/account/settings"),
+        ]);
+
+        if (langResponse.ok) {
+          const langData = await langResponse.json();
+          setLanguages(langData.languages);
+
           // Only set default language and code if not already set
-          if (data.languages.length > 0 && !selectedLanguage) {
-            const defaultLang = data.languages.find((l: Language) => l.extension === "cpp") || data.languages[0];
-            setSelectedLanguage(defaultLang);
-            // Load saved code if available, otherwise use default
-            const savedCode = getSavedCodeForLanguage(defaultLang.extension);
-            if (savedCode) {
-              setCode(savedCode);
-            } else if (!code.trim()) {
-              setCode(DEFAULT_CODE[defaultLang.extension] || "");
+          if (langData.languages.length > 0 && !selectedLanguage) {
+            let defaultLang = langData.languages.find((l: Language) => l.extension === "cpp") || langData.languages[0];
+
+            // Use user's preferred language if set
+            if (settingsResponse.ok) {
+              const settingsData = await settingsResponse.json();
+              if (settingsData.defaultLanguageId) {
+                const userPreferredLang = langData.languages.find(
+                  (l: Language) => l.id === settingsData.defaultLanguageId
+                );
+                if (userPreferredLang) {
+                  defaultLang = userPreferredLang;
+                }
+              }
             }
+
+            setSelectedLanguage(defaultLang);
+            // Load saved code if available, otherwise use default template
+            const savedCode = getSavedCodeForLanguage(defaultLang.extension);
+            setCode(savedCode || DEFAULT_CODE[defaultLang.extension] || "");
           }
         }
       } catch (error) {
@@ -211,21 +227,16 @@ export function CodeEditor() {
       }
     };
 
-    fetchLanguages();
-  }, [selectedLanguage, code, setSelectedLanguage, setCode, getSavedCodeForLanguage]);
+    fetchLanguagesAndSettings();
+  }, [selectedLanguage, setSelectedLanguage, setCode, getSavedCodeForLanguage]);
 
   const handleLanguageChange = (languageId: string) => {
     const lang = languages.find((l) => l.id.toString() === languageId);
     if (lang) {
       setSelectedLanguage(lang);
-      // First check if there's saved code for this language
+      // Load saved code for this language, or default template if none exists
       const savedCode = getSavedCodeForLanguage(lang.extension);
-      if (savedCode) {
-        setCode(savedCode);
-      } else if (!code.trim() || Object.values(DEFAULT_CODE).includes(code)) {
-        // Only set default code if no saved code and current code is empty/default
-        setCode(DEFAULT_CODE[lang.extension] || "");
-      }
+      setCode(savedCode || DEFAULT_CODE[lang.extension] || "");
     }
   };
 

@@ -16,6 +16,7 @@ model User {
   stripeSubscriptionId   String?   @unique
   stripePriceId          String?
   stripeCurrentPeriodEnd DateTime?
+  defaultLanguageId      Int?      // Judge0 language ID (e.g., 54 for C++ 17)
   chats                  Chat[]
 }
 
