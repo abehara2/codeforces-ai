@@ -22,12 +22,12 @@ export function MainContent({ problemId, problemHtml }: MainContentProps) {
     <div className="flex-1 flex flex-col min-w-0">
       {/* Header with Tabs */}
       <header className="h-12 flex items-center justify-between px-4 border-b border-border bg-white">
-        <div className="flex items-center gap-1">
+        <div className="flex items-end h-full">
           {/* Open sidebar button when collapsed */}
           {collapsed && (
             <button
               onClick={() => setCollapsed(false)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-muted mr-1"
+              className="flex items-center gap-1.5 px-3 py-1.5 mb-2 text-sm font-medium rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
               title="Open sidebar (⌘B)"
             >
               <PanelLeft className="h-4 w-4" />
@@ -36,10 +36,10 @@ export function MainContent({ problemId, problemHtml }: MainContentProps) {
           {/* Tabs */}
           <button
             onClick={() => setActiveTab("problem")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded transition-colors ${
+            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors cursor-pointer border -mb-px ${
               activeTab === "problem"
-                ? "bg-black text-white"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                ? "text-foreground border-border border-b-white bg-white"
+                : "text-muted-foreground hover:text-foreground border-transparent"
             }`}
           >
             <FileText className="h-4 w-4" />
@@ -48,17 +48,16 @@ export function MainContent({ problemId, problemHtml }: MainContentProps) {
           {hasProblem && (
           <button
             onClick={() => setActiveTab("code")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded transition-colors ${
+            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors cursor-pointer border -mb-px ${
               activeTab === "code"
-                ? "bg-black text-white"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                ? "text-foreground border-border border-b-white bg-white"
+                : "text-muted-foreground hover:text-foreground border-transparent"
             }`}
           >
             <Code2 className="h-4 w-4" />
             CODE
           </button>
           )}
-          
         </div>
 
         {/* Right side: Problem ID Link and Chat toggle */}

@@ -12,6 +12,7 @@
     "sync:problems": "npx dotenv-cli -e .env.development -- npx tsx scripts/sync-problems.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
     "@browserbasehq/sdk": "^2.0.0",
     "@clerk/nextjs": "^6.36.2",
     "@monaco-editor/react": "^4.7.0",

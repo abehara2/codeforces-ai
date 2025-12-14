@@ -106,11 +106,36 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
     }
   }, [lastChangeResult]);
 
+  const handleClear = async () => {
+    try {
+      const response = await fetch(`/api/chats/${chatId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "clear_messages" }),
+      });
+
+      if (response.ok) {
+        setMessages([]);
+        setStreamingContent("");
+      }
+    } catch (error) {
+      console.error("Failed to clear chat:", error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isStreaming) return;
 
     const userMessage = input.trim();
+
+    // Handle /clear command
+    if (userMessage.toLowerCase() === "/clear") {
+      setInput("");
+      await handleClear();
+      return;
+    }
+
     setInput("");
     setIsStreaming(true);
     setStreamingContent("");
@@ -395,7 +420,7 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask about the problem..."
+              placeholder="Ask about the problem... (/clear to reset)"
               className="min-h-[60px] max-h-[120px] resize-none text-sm"
               disabled={isStreaming}
             />

@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
 
 function getOpenAIClient() {
@@ -9,10 +10,16 @@ function getOpenAIClient() {
   });
 }
 
+function getAnthropicClient() {
+  return new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY,
+  });
+}
+
 // Router configuration
 const MODELS = {
-  information: "gpt-5.1-mini",
-  implementation: "gpt-5-codex",
+  information: "gpt-4.1-mini",
+  implementation: "claude-opus-4-20250514",
 } as const;
 
 type RequestType = keyof typeof MODELS;
@@ -54,14 +61,13 @@ Respond with exactly one word: either "information" or "implementation".`;
   }
 }
 
-// Tool definitions for the AI agent
-const tools: OpenAI.Responses.Tool[] = [
+// Tool definitions for Anthropic (used for implementation requests)
+const anthropicTools: Anthropic.Tool[] = [
   {
-    type: "function",
     name: "modify_code",
     description:
       "Propose a modification to the user's code in the editor. Use this tool when the user asks you to write, modify, fix, or improve their code. The code will be shown to the user for confirmation before being applied. Always generate code in the language the user is currently using in their editor.",
-    parameters: {
+    input_schema: {
       type: "object",
       properties: {
         code: {
@@ -76,9 +82,7 @@ const tools: OpenAI.Responses.Tool[] = [
         },
       },
       required: ["code", "description"],
-      additionalProperties: false,
     },
-    strict: true,
   },
 ];
 
@@ -211,7 +215,16 @@ IF USER ASKS FOR PSEUDOCODE:
 - Write detailed pseudocode as comments outlining the full algorithm
 - Include step-by-step logic with numbered steps and sub-steps
 - Add TIME: O(...) and SPACE: O(...) complexity at the end
-- Keep it clear enough that implementation follows directly from it`;
+- Keep it clear enough that implementation follows directly from it
+
+FORMATTING RESPONSES:
+- Always format code snippets and examples using markdown code blocks with the appropriate language tag
+- Use \`\`\`cpp for C++, \`\`\`python for Python, \`\`\`java for Java, etc.
+- For inline code references like variable names or function names, use single backticks: \`variableName\`
+- Use **bold** for emphasis on key concepts
+- Use bullet points and numbered lists for step-by-step explanations
+- Format mathematical expressions clearly (e.g., O(n log n), n × m, 2^n)
+- When showing algorithm steps or complexity analysis, use clear formatting with headers if needed`;
 
     const openai = getOpenAIClient();
 
@@ -221,54 +234,56 @@ IF USER ASKS FOR PSEUDOCODE:
     
     console.log(`[Router] Classified as "${requestType}" → using ${selectedModel}`);
 
-    // Call OpenAI API with streaming
-    // Only include tools for implementation requests
-    const response = await openai.responses.create({
-      model: selectedModel,
-      input: [
-        { role: "system", content: systemPrompt },
-        ...conversationHistory,
-        { role: "user", content: message },
-      ],
-      ...(requestType === "implementation" ? { tools } : {}),
-      stream: true,
-    });
-
     // Create a streaming response
     const encoder = new TextEncoder();
     let fullContent = "";
-    let currentToolCall: { name: string; arguments: string } | null = null;
 
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const event of response) {
-            if (event.type === "response.output_text.delta") {
-              const text = event.delta;
-              fullContent += text;
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ text })}\n\n`)
-              );
-            } else if (event.type === "response.function_call_arguments.delta") {
-              // Accumulate function arguments
-              if (currentToolCall) {
-                currentToolCall.arguments += event.delta;
-              }
-            } else if (event.type === "response.output_item.added") {
-              // Check if it's a function call
-              if (event.item.type === "function_call") {
-                currentToolCall = {
-                  name: event.item.name,
-                  arguments: "",
-                };
-              }
-            } else if (event.type === "response.output_item.done") {
-              // Function call is complete
-              if (event.item.type === "function_call" && currentToolCall) {
-                try {
-                  const args = JSON.parse(currentToolCall.arguments);
-                  if (currentToolCall.name === "modify_code") {
-                    // Send tool call to client
+          if (requestType === "implementation") {
+            // Use Anthropic for implementation requests
+            const anthropic = getAnthropicClient();
+            
+            // Convert conversation history to Anthropic format
+            const anthropicMessages: Anthropic.MessageParam[] = conversationHistory.map((msg) => ({
+              role: msg.role,
+              content: msg.content,
+            }));
+            anthropicMessages.push({ role: "user", content: message });
+
+            const response = await anthropic.messages.create({
+              model: selectedModel,
+              max_tokens: 16384,
+              system: systemPrompt,
+              messages: anthropicMessages,
+              tools: anthropicTools,
+              stream: true,
+            });
+
+            let currentToolName = "";
+            let currentToolInput = "";
+
+            for await (const event of response) {
+              if (event.type === "content_block_start") {
+                if (event.content_block.type === "tool_use") {
+                  currentToolName = event.content_block.name;
+                  currentToolInput = "";
+                }
+              } else if (event.type === "content_block_delta") {
+                if (event.delta.type === "text_delta") {
+                  const text = event.delta.text;
+                  fullContent += text;
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ text })}\n\n`)
+                  );
+                } else if (event.delta.type === "input_json_delta") {
+                  currentToolInput += event.delta.partial_json;
+                }
+              } else if (event.type === "content_block_stop") {
+                if (currentToolName === "modify_code" && currentToolInput) {
+                  try {
+                    const args = JSON.parse(currentToolInput);
                     controller.enqueue(
                       encoder.encode(
                         `data: ${JSON.stringify({
@@ -280,13 +295,34 @@ IF USER ASKS FOR PSEUDOCODE:
                         })}\n\n`
                       )
                     );
-                    // Add to full content for saving
                     fullContent += `\n\n[Proposed code modification: ${args.description}]`;
+                  } catch (e) {
+                    console.error("Failed to parse tool call arguments:", e);
                   }
-                } catch (e) {
-                  console.error("Failed to parse tool call arguments:", e);
+                  currentToolName = "";
+                  currentToolInput = "";
                 }
-                currentToolCall = null;
+              }
+            }
+          } else {
+            // Use OpenAI for information requests
+            const response = await openai.responses.create({
+              model: selectedModel,
+              input: [
+                { role: "system", content: systemPrompt },
+                ...conversationHistory,
+                { role: "user", content: message },
+              ],
+              stream: true,
+            });
+
+            for await (const event of response) {
+              if (event.type === "response.output_text.delta") {
+                const text = event.delta;
+                fullContent += text;
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ text })}\n\n`)
+                );
               }
             }
           }

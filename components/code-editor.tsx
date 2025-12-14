@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import Editor, { DiffEditor } from "@monaco-editor/react";
-import { Play, Loader2, RotateCcw, GripHorizontal, Check, X, Sparkles } from "lucide-react";
+import { Play, Loader2, RotateCcw, GripHorizontal, Check, X, Sparkles, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -279,8 +279,9 @@ export function CodeEditor() {
           </Button>
           <Button
             onClick={handleExecute}
+            variant="outline"
             disabled={executing || !code.trim() || !!pendingChange}
-            className="gap-2"
+            className="gap-2 hover:bg-green-600 hover:text-white hover:border-green-600"
           >
             {executing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -288,6 +289,13 @@ export function CodeEditor() {
               <Play className="h-4 w-4" />
             )}
             RUN
+          </Button>
+          <Button
+            disabled={!code.trim() || !!pendingChange}
+            className="gap-2 btn-shimmer"
+          >
+            <Send className="h-4 w-4" />
+            SUBMIT
           </Button>
         </div>
       </div>
