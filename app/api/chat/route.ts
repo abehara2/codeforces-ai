@@ -81,7 +81,8 @@ export async function POST(request: Request) {
         },
       });
 
-      if (assistantMessageCount >= 5) {
+      const maxFreeMessages = parseInt(process.env.MAX_FREE_MESSAGES || "5", 10);
+      if (assistantMessageCount >= maxFreeMessages) {
         return NextResponse.json(
           { error: "MESSAGE_LIMIT_REACHED" },
           { status: 403 }
