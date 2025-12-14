@@ -17,17 +17,17 @@ export default function LandingPage() {
   }, [isSignedIn, isLoaded, router]);
 
   return (
-    <main className="h-screen bg-[#F7F7F4] overflow-hidden flex flex-col justify-center md:justify-start md:pt-0">
+    <main className="h-screen bg-[#F7F7F4] overflow-hidden flex flex-col justify-center md:justify-start">
       {/* Main Content */}
-      <div className="px-6 md:px-24 lg:px-32 md:pt-16">
+      <div className="px-6 md:px-24 lg:px-32 md:pt-16 pb-8 md:pb-16">
         {/* Tagline */}
-        <h2 className="text-4xl md:text-5xl font-normal text-black max-w-2xl leading-snug mb-8 md:mb-16 font-[family-name:var(--font-playfair)]">
+        <h2 className="text-4xl md:text-5xl font-normal text-black max-w-2xl leading-snug font-[family-name:var(--font-playfair)]">
           Built to coach the world's best competitive programmers.
         </h2>
       </div>
 
       {/* Image section wrapper */}
-      <div className="mt-4 md:mt-0 px-6 md:px-24 lg:px-32">
+      <div className="pt-4 md:pt-0 px-6 md:px-24 lg:px-32">
         {/* Image container */}
         <div className="relative group shadow-2xl rounded-t-3xl overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
