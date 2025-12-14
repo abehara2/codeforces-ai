@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import puppeteer from "puppeteer-core";
-import chromium from "@sparticuz/chromium";
+import chromium from "@sparticuz/chromium-min";
 
 export interface ProblemData {
   html: string;
@@ -78,7 +78,9 @@ export async function fetchCodeforcesProblem(problemUrl: string): Promise<Proble
     browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: { width: 1920, height: 1080 },
-      executablePath: await chromium.executablePath(),
+      executablePath: await chromium.executablePath(
+        "https://github.com/Sparticuz/chromium/releases/download/v143.0.0/chromium-v143.0.0-pack.tar"
+      ),
       headless: true,
     });
 
