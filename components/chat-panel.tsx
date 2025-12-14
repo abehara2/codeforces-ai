@@ -313,8 +313,7 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
       />
 
       {/* Header */}
-      <header className="h-12 flex items-center justify-between px-4 border-b border-border">
-        <h2 className="text-sm font-bold">AI ASSISTANT</h2>
+      <header className="h-12 flex items-center justify-end px-4 border-b border-border">
         <button
           onClick={() => setChatCollapsed(true)}
           className="p-1 hover:bg-accent transition-colors"
@@ -482,7 +481,7 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="p-3 border-t border-border bg-white">
+        <form onSubmit={handleSubmit} className="p-3 border-t border-border bg-[#fafafa]">
           <div className="flex gap-2">
             <Textarea
               ref={textareaRef}
@@ -490,7 +489,7 @@ export function ChatPanel({ chatId, initialMessages }: ChatPanelProps) {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask about the problem... (/clear to reset)"
-              className="min-h-[60px] max-h-[120px] resize-none text-sm"
+              className="min-h-[60px] max-h-[120px] resize-none text-sm bg-white"
               disabled={isStreaming}
             />
             <Button
