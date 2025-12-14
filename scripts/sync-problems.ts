@@ -32,6 +32,7 @@ const LIMIT = limitArg ? parseInt(limitArg.split("=")[1], 10) : undefined;
 const DELAY_BETWEEN_REQUESTS_MS = 2000;
 const BATCH_SIZE = 10; // Pause longer after every batch
 const BATCH_DELAY_MS = 10000;
+const SESSION_RESTART_INTERVAL = 30; // Restart browser session every N problems
 
 interface CodeforcesProblem {
   contestId: number;
@@ -171,13 +172,14 @@ async function main() {
 
   console.log(`\n📊 Processing ${problemsToProcess.length} problems...\n`);
 
-  // Create Browserbase session
-  const { driver, sessionId } = await createBrowserbaseSession();
+  // Create initial Browserbase session
+  let { driver, sessionId } = await createBrowserbaseSession();
 
   let scraped = 0;
   let skipped = 0;
   let failed = 0;
   let duplicates = 0;
+  let scrapedSinceRestart = 0;
 
   try {
     for (let i = 0; i < problemsToProcess.length; i++) {
@@ -201,6 +203,15 @@ async function main() {
         continue;
       }
 
+      // Restart session every SESSION_RESTART_INTERVAL problems
+      if (scrapedSinceRestart >= SESSION_RESTART_INTERVAL) {
+        console.log(`\n🔄 Restarting session after ${SESSION_RESTART_INTERVAL} problems...`);
+        await driver.quit();
+        await sleep(2000); // Brief pause before creating new session
+        ({ driver, sessionId } = await createBrowserbaseSession());
+        scrapedSinceRestart = 0;
+      }
+
       console.log(
         `[${i + 1}/${problemsToProcess.length}] Scraping ${problemId}: ${problem.name}`
       );
@@ -219,8 +230,10 @@ async function main() {
         });
         console.log(`   ✅ Saved ${problemId}`);
         scraped++;
+        scrapedSinceRestart++;
       } else {
         failed++;
+        scrapedSinceRestart++; // Count failed attempts too to avoid stuck sessions
       }
 
       // Rate limiting

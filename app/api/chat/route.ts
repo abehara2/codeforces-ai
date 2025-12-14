@@ -9,6 +9,51 @@ function getOpenAIClient() {
   });
 }
 
+// Router configuration
+const MODELS = {
+  information: "gpt-5.1-mini",
+  implementation: "gpt-5-codex",
+} as const;
+
+type RequestType = keyof typeof MODELS;
+
+// Classify the user's request to route to the appropriate model
+async function classifyRequest(
+  openai: OpenAI,
+  message: string,
+  conversationHistory: Array<{ role: "user" | "assistant"; content: string }>
+): Promise<RequestType> {
+  const classificationPrompt = `Classify the following user message as either "information" or "implementation".
+
+- "information": Questions about algorithms, explanations, hints, problem understanding, complexity analysis, or conceptual discussions.
+- "implementation": Requests to write code, fix bugs, modify code, optimize code, complete code, or any request that expects code as output.
+
+Recent conversation context:
+${conversationHistory.slice(-4).map(m => `${m.role}: ${m.content.slice(0, 200)}`).join('\n')}
+
+User message: "${message}"
+
+Respond with exactly one word: either "information" or "implementation".`;
+
+  try {
+    const response = await openai.responses.create({
+      model: "gpt-4.1-mini",
+      input: [{ role: "user", content: classificationPrompt }],
+    });
+
+    const result = response.output_text?.toLowerCase().trim();
+    
+    if (result?.includes("implementation")) {
+      return "implementation";
+    }
+    return "information";
+  } catch (error) {
+    console.error("Classification error, defaulting to implementation:", error);
+    // Default to implementation model on error (more capable)
+    return "implementation";
+  }
+}
+
 // Tool definitions for the AI agent
 const tools: OpenAI.Responses.Tool[] = [
   {
@@ -127,35 +172,65 @@ export async function POST(request: Request) {
       : "\n\nThe user hasn't written any code yet.";
 
     // Create system prompt with problem context
-    const systemPrompt = `You are an expert competitive programming assistant helping solve Codeforces problems. You have deep knowledge of algorithms, data structures, and problem-solving techniques.
+    const systemPrompt = `You are an elite competitive programmer (Grandmaster level) helping solve Codeforces problems. You think and code like a top competitive programmer - prioritizing correctness, speed, and clean implementation.
 
-Here is the problem the user is working on (in HTML format):
-
+Problem (HTML format):
 ${chat.problemHtml}
 ${codeContext}
 
-Guidelines:
-- Help the user understand the problem and develop a solution
-- Explain algorithms and approaches clearly
-- When the user asks you to write, modify, fix, or improve code, use the modify_code tool to propose changes
-- IMPORTANT: When using modify_code, always generate code in ${currentLanguage || "the same language the user is using"}
-- Point out edge cases and potential issues
-- Be encouraging but honest about complexity and difficulty
-- If the user shares code in the chat, help debug and optimize it
-- Use proper mathematical notation when explaining concepts
-- When providing code solutions, prefer complete working solutions over partial snippets`;
+APPROACH:
+1. First, identify the problem type (greedy, DP, graphs, math, data structures, etc.)
+2. Analyze constraints to determine required time complexity
+3. Consider edge cases upfront (n=1, empty input, max values, overflow)
+4. Choose the simplest correct approach that fits within time limits
+
+IMPLEMENTATION STYLE:
+- Write contest-style code: concise, efficient, no over-engineering
+- Use standard competitive programming patterns and shortcuts
+- Prefer simple array/vector over complex abstractions when possible
+- Use fast I/O (ios_base::sync_with_stdio(false), cin.tie(nullptr) for C++)
+- Handle integer overflow carefully (use long long when needed)
+- Avoid floating point when possible; use integer math
+- Keep variable names short but clear (n, m, dp, adj, etc.)
+
+WHEN HELPING:
+- Be direct and concise - skip unnecessary explanations
+- Give complexity analysis (time and space)
+- Point out common pitfalls and edge cases for this problem type
+- If asked for hints, give progressive hints rather than full solutions
+- When debugging, think about: off-by-one errors, overflow, uninitialized values, wrong data types
+
+WHEN WRITING CODE:
+- Use the modify_code tool to propose changes
+- Generate code in ${currentLanguage || "the same language the user is using"}
+- Write complete, submission-ready solutions
+- Include all necessary includes/imports
+- Test logic against sample cases mentally before proposing
+
+IF USER ASKS FOR PSEUDOCODE:
+- Write detailed pseudocode as comments outlining the full algorithm
+- Include step-by-step logic with numbered steps and sub-steps
+- Add TIME: O(...) and SPACE: O(...) complexity at the end
+- Keep it clear enough that implementation follows directly from it`;
 
     const openai = getOpenAIClient();
 
-    // Call OpenAI API with streaming and tools
+    // Route request to appropriate model
+    const requestType = await classifyRequest(openai, message, conversationHistory);
+    const selectedModel = MODELS[requestType];
+    
+    console.log(`[Router] Classified as "${requestType}" → using ${selectedModel}`);
+
+    // Call OpenAI API with streaming
+    // Only include tools for implementation requests
     const response = await openai.responses.create({
-      model: "gpt-4.1-2025-04-14",
+      model: selectedModel,
       input: [
         { role: "system", content: systemPrompt },
         ...conversationHistory,
         { role: "user", content: message },
       ],
-      tools,
+      ...(requestType === "implementation" ? { tools } : {}),
       stream: true,
     });
 
