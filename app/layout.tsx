@@ -23,7 +23,18 @@ const orbitron = Orbitron({
 
 export const metadata: Metadata = {
   title: "Codeforces AI",
-  description: "made by Ashank Behara",
+  description: "Competitive Programming Coach",
+  openGraph: {
+    title: "Codeforces AI",
+    description: "Competitive Programming Coach",
+    images: ["/CODE.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Codeforces AI",
+    description: "Competitive Programming Coach",
+    images: ["/CODE.png"],
+  },
 };
 
 export default function RootLayout({
