@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { MessageSquare, Trash2, LogOut, CreditCard, Settings, Search, Plus, PanelLeftClose } from "lucide-react";
+import { MessageSquare, Trash2, LogOut, CreditCard, Settings, Search, Plus, PanelLeftClose, Mail } from "lucide-react";
 import { useClerk, useUser } from "@clerk/nextjs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -286,7 +286,7 @@ export function ChatSidebar() {
       <div className="p-3">
         <button
           onClick={() => setShowSearch(true)}
-          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-muted-foreground bg-muted/50 border border-border hover:bg-muted transition-colors"
+          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-muted-foreground bg-white border border-border hover:bg-muted transition-colors"
         >
           <Search className="h-4 w-4" />
           <span className="flex-1 text-left">Search...</span>
@@ -317,16 +317,19 @@ export function ChatSidebar() {
                       e.preventDefault();
                       setContextMenu({ x: e.clientX, y: e.clientY, chatId: chat.id });
                     }}
-                    className={`block px-2 py-1.5 text-sm transition-colors ${
+                    className={`group block px-2 py-1.5 text-sm transition-colors ${
                       isActive
-                        ? "bg-white font-medium"
-                        : "hover:bg-white/50"
+                        ? "font-medium text-blue-600"
+                        : "text-black"
                     }`}
                   >
                     <span className="truncate block">
+                      <span className="mr-1">
+                        {isActive ? '>' : <span className="invisible group-hover:visible">&gt;</span>}
+                      </span>
                       {chat.title.includes('. ') ? chat.title.split('. ').slice(1).join('. ') : chat.title}
                       {' '}
-                      <span className="text-muted-foreground">[{chat.problemId}]</span>
+                      [{chat.problemId}]
                     </span>
                   </Link>
                 );
@@ -340,7 +343,7 @@ export function ChatSidebar() {
       <div className="p-3 border-t border-border">
         <button 
           onClick={() => setNewProblemOpen(true)}
-          className="flex items-center gap-2 w-full px-3 py-2.5 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+          className="flex items-center gap-2 w-full px-3 py-2.5 text-sm font-medium border border-black bg-white hover:bg-muted transition-colors"
         >
           <Plus className="h-4 w-4" />
           New Problem
@@ -350,6 +353,24 @@ export function ChatSidebar() {
           onOpenChange={setNewProblemOpen}
           onChatCreated={fetchChats}
         />
+      </div>
+
+      <Separator />
+
+      {/* Support Card */}
+      <div className="p-3">
+        <a
+          href="mailto:ashank.behara@gmail.com"
+          className="block w-full px-3 py-4 bg-orange-50 border border-orange-700 text-orange-700 hover:bg-orange-100 transition-colors"
+        >
+          <div className="flex items-center gap-2 font-medium text-sm mb-1">
+            <Mail className="h-4 w-4" />
+            Need Help?
+          </div>
+          <p className="text-xs text-orange-700">
+            Have questions or feedback? We'd love to hear from you.
+          </p>
+        </a>
       </div>
 
       {/* Drag handle */}
