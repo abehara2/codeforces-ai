@@ -1,7 +1,16 @@
 import * as cheerio from "cheerio";
+import { prisma } from "./prisma";
 
 // Detect if running on Vercel/serverless
 const isVercel = process.env.VERCEL === "1";
+
+// Residential proxy URL (e.g., from Bright Data, Oxylabs, SmartProxy)
+// Format: http://username:password@proxy.example.com:port
+const RESIDENTIAL_PROXY_URL = process.env.RESIDENTIAL_PROXY_URL;
+
+// External scraper service (Render-hosted Playwright with stealth)
+const SCRAPER_SERVICE_URL = process.env.SCRAPER_SERVICE_URL;
+const SCRAPER_API_KEY = process.env.SCRAPER_API_KEY;
 
 export interface ProblemData {
   html: string;
@@ -67,23 +76,110 @@ export function parseCodeforcesUrl(input: string): { contestId: string; problemI
   }
 }
 
+// Fetch problem using external scraper service
+async function fetchViaScraperService(url: string): Promise<{ html: string; text: string; title: string }> {
+  console.log("[fetchViaScraperService] Calling scraper service for:", url);
+  
+  const response = await fetch(`${SCRAPER_SERVICE_URL}/scrape`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(SCRAPER_API_KEY && { "X-API-Key": SCRAPER_API_KEY }),
+    },
+    body: JSON.stringify({ url }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(error.error || `Scraper service returned ${response.status}`);
+  }
+
+  const result = await response.json();
+  
+  if (!result.success) {
+    throw new Error(result.error || "Scraper service failed");
+  }
+
+  return {
+    html: result.data.html,
+    text: result.data.text,
+    title: result.data.title,
+  };
+}
+
 export async function fetchCodeforcesProblem(problemUrl: string): Promise<ProblemData> {
   const { contestId, problemIndex, url } = parseCodeforcesUrl(problemUrl);
   const problemId = `${contestId}/${problemIndex}`;
   
-  console.log("[fetchCodeforcesProblem] Fetching from URL:", url);
+  // Check cache first
+  const cached = await prisma.problemCache.findUnique({
+    where: { problemId },
+  });
+
+  if (cached) {
+    console.log("[fetchCodeforcesProblem] Cache hit for:", problemId);
+    return {
+      html: cached.html,
+      text: cached.text,
+      title: cached.title,
+      url: cached.url,
+      problemId: cached.problemId,
+    };
+  }
+
+  console.log("[fetchCodeforcesProblem] Cache miss, fetching from URL:", url);
+
+  // Try external scraper service first if configured
+  if (SCRAPER_SERVICE_URL) {
+    try {
+      const { html, text, title } = await fetchViaScraperService(url);
+      
+      const problemData: ProblemData = {
+        html,
+        text,
+        title,
+        url,
+        problemId,
+      };
+
+      // Cache the result
+      await prisma.problemCache.create({
+        data: {
+          problemId,
+          url,
+          title,
+          html,
+          text,
+        },
+      });
+      console.log("[fetchCodeforcesProblem] Cached problem from scraper service:", problemId);
+
+      return problemData;
+    } catch (error) {
+      console.error("[fetchCodeforcesProblem] Scraper service failed, falling back to local:", error);
+      // Fall through to local scraping
+    }
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let browser: any = null;
   try {
     // Use different browser setup for local vs Vercel
     if (isVercel) {
-      // Production: use puppeteer-core with chromium-min
+      // Production: use puppeteer-core with chromium-min and residential proxy
       const puppeteer = await import("puppeteer-core");
       const chromium = await import("@sparticuz/chromium-min");
       
+      const launchArgs = [...chromium.default.args];
+      
+      // Add proxy if configured
+      if (RESIDENTIAL_PROXY_URL) {
+        console.log("[fetchCodeforcesProblem] Using residential proxy");
+        launchArgs.push(`--proxy-server=${RESIDENTIAL_PROXY_URL}`);
+      }
+      
       browser = await puppeteer.default.launch({
-        args: chromium.default.args,
+        args: launchArgs,
         defaultViewport: { width: 1920, height: 1080 },
         executablePath: await chromium.default.executablePath(
           "https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar"
@@ -94,15 +190,23 @@ export async function fetchCodeforcesProblem(problemUrl: string): Promise<Proble
       // Local: use full puppeteer with bundled Chrome
       const puppeteer = await import("puppeteer");
       
+      const launchArgs = [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--disable-gpu",
+      ];
+      
+      // Add proxy if configured (for local testing)
+      if (RESIDENTIAL_PROXY_URL) {
+        console.log("[fetchCodeforcesProblem] Using residential proxy");
+        launchArgs.push(`--proxy-server=${RESIDENTIAL_PROXY_URL}`);
+      }
+      
       browser = await puppeteer.default.launch({
         headless: true,
-        args: [
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--disable-dev-shm-usage",
-          "--disable-accelerated-2d-canvas",
-          "--disable-gpu",
-        ],
+        args: launchArgs,
       });
     }
 
@@ -170,13 +274,27 @@ export async function fetchCodeforcesProblem(problemUrl: string): Promise<Proble
     const title = $(".title").first().text().trim();
     console.log("[fetchCodeforcesProblem] Problem title:", title);
 
-    return {
+    const problemData: ProblemData = {
       html,
       text,
       title,
       url,
       problemId,
     };
+
+    // Cache the result
+    await prisma.problemCache.create({
+      data: {
+        problemId,
+        url,
+        title,
+        html,
+        text,
+      },
+    });
+    console.log("[fetchCodeforcesProblem] Cached problem:", problemId);
+
+    return problemData;
   } finally {
     if (browser) {
       await browser.close();
