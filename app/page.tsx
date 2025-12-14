@@ -4,6 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 export default function LandingPage() {
   const { isSignedIn, isLoaded } = useAuth();
@@ -26,25 +27,25 @@ export default function LandingPage() {
       </div>
 
       {/* Image section wrapper */}
-      <div className="relative mt-4 md:mt-0 group mx-6 md:mx-24 lg:mx-32">
+      <div className="mt-4 md:mt-0 px-6 md:px-24 lg:px-32">
         {/* Image container */}
-        <div className="relative shadow-2xl rounded-t-3xl overflow-hidden">
+        <div className="relative group shadow-2xl rounded-t-3xl overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/CODE.png"
             alt="Code editor view"
             className="w-full rounded-t-3xl min-w-[800px]"
           />
-        </div>
-        {/* Overlay with blur - covers visible area */}
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] md:backdrop-blur-md md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 flex items-center md:items-start md:pt-72 justify-center rounded-t-3xl">
-          <Link
-            href="/sign-in"
-            className="px-8 py-4 text-lg font-medium text-white bg-black hover:bg-black/80 rounded-full transition-colors font-[family-name:var(--font-playfair)] inline-flex items-center gap-2"
-          >
-            Sign in
-            <span>→</span>
-          </Link>
+          {/* Overlay with blur - covers visible area */}
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] md:backdrop-blur-md md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 flex items-center md:items-start md:pt-72 justify-center rounded-t-3xl">
+            <Link
+              href="/sign-in"
+              className="px-8 py-4 text-lg font-medium text-white bg-black hover:bg-black/80 transition-colors font-[family-name:var(--font-space-mono)] inline-flex items-center gap-2"
+            >
+              Sign in
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+          </div>
         </div>
       </div>
     </main>
