@@ -1,8 +1,9 @@
 "use client";
 
-import { SignIn, useAuth } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import Link from "next/link";
 
 export default function LandingPage() {
   const { isSignedIn, isLoaded } = useAuth();
@@ -15,35 +16,35 @@ export default function LandingPage() {
   }, [isSignedIn, isLoaded, router]);
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-white">
-      <div className="flex flex-col items-center gap-8">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-black mb-2">
-            CODEFORCES AI
-          </h1>
-          <p className="text-muted-foreground text-sm tracking-wide">
-            AI-POWERED COMPETITIVE PROGRAMMING ASSISTANT
-          </p>
-        </div>
-        <div className="border border-border">
-          <SignIn
-            routing="hash"
-            forceRedirectUrl="/chat"
-            appearance={{
-              elements: {
-                rootBox: "w-full",
-                card: "shadow-none border-0 rounded-none",
-                headerTitle: "font-bold",
-                headerSubtitle: "text-muted-foreground",
-                formButtonPrimary:
-                  "bg-black hover:bg-black/90 text-white rounded-none",
-                formFieldInput: "rounded-none border-border",
-                footerActionLink: "text-black hover:text-black/80",
-                identityPreviewEditButton: "text-black",
-                formFieldAction: "text-black",
-              },
-            }}
+    <main className="h-screen bg-[#F7F7F4] overflow-hidden flex flex-col justify-center md:justify-start md:pt-0">
+      {/* Main Content */}
+      <div className="px-6 md:px-24 lg:px-32 md:pt-16">
+        {/* Tagline */}
+        <h2 className="text-4xl md:text-5xl font-normal text-black max-w-2xl leading-snug mb-8 md:mb-16 font-[family-name:var(--font-playfair)]">
+          Built to coach the world's best competitive programmers.
+        </h2>
+      </div>
+
+      {/* Image section wrapper */}
+      <div className="relative mt-4 md:mt-0 group mx-6 md:mx-24 lg:mx-32">
+        {/* Image container */}
+        <div className="relative shadow-2xl rounded-t-3xl overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/CODE.png"
+            alt="Code editor view"
+            className="w-full rounded-t-3xl min-w-[800px]"
           />
+        </div>
+        {/* Overlay with blur - covers visible area */}
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] md:backdrop-blur-md md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 flex items-center md:items-start md:pt-72 justify-center rounded-t-3xl">
+          <Link
+            href="/sign-in"
+            className="px-8 py-4 text-lg font-medium text-white bg-black hover:bg-black/80 rounded-full transition-colors font-[family-name:var(--font-playfair)] inline-flex items-center gap-2"
+          >
+            Sign in
+            <span>→</span>
+          </Link>
         </div>
       </div>
     </main>
