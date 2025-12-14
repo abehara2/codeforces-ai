@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { fetchCodeforcesProblemClient, parseCodeforcesUrl } from "@/lib/codeforces-client";
@@ -77,7 +79,9 @@ export function NewProblemModal({ trigger, open, onOpenChange }: NewProblemModal
 
   const content = (
     <form onSubmit={handleCreateChat} className="space-y-4">
-      <h2 className="text-lg font-bold">Paste a Codeforces URL</h2>
+      <DialogHeader>
+        <DialogTitle>Paste a Codeforces URL</DialogTitle>
+      </DialogHeader>
       <div className="relative">
         <Input
           type="text"
