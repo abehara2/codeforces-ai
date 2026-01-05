@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Space_Mono, Playfair_Display, Orbitron } from "next/font/google";
+import { Space_Mono, Playfair_Display, Orbitron, Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
@@ -17,6 +17,12 @@ const playfairDisplay = Playfair_Display({
 
 const orbitron = Orbitron({
   variable: "--font-orbitron",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
@@ -45,7 +51,7 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <body className={`${spaceMono.variable} ${playfairDisplay.variable} ${orbitron.variable} antialiased`}>
+        <body className={`${spaceMono.variable} ${playfairDisplay.variable} ${orbitron.variable} ${inter.variable} antialiased`}>
           {children}
         </body>
       </html>

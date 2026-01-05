@@ -141,3 +141,8 @@
 .btn-shimmer:hover::before {
   animation: shimmer 0.6s ease-in-out;
 }
+
+/* Radial gradient utility */
+.bg-gradient-radial {
+  background: radial-gradient(ellipse at center, var(--tw-gradient-stops));
+}
